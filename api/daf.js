@@ -6,6 +6,9 @@
 //    DAF_ACCESS_SECRET   secret HMAC pour générer/vérifier les codes clients (obligatoire)
 //    DAF_ADMIN_KEY       clé pour admin.html (générer des codes)            (obligatoire)
 //    DAF_MODEL           modèle (défaut : claude-sonnet-5)
+//    DAF_EFFORT          profondeur de réflexion du modèle : low | medium | high (défaut : medium).
+//                        En « high », la réflexion consommait jusqu'à 20 000 jetons de sortie et
+//                        4 minutes par analyse : trop long pour l'outil, et trop cher.
 //    DAF_DAILY_QUOTA     analyses par jour et par code (défaut : 10)
 //    DAF_ACCESS_CODES    codes fixes optionnels : "CODE:Libellé:2026-12-31,AUTRE:Libellé"
 //    DAF_REVOKED         tags de codes désactivés, séparés par des virgules : "DUPONT,MARTIN"
@@ -19,6 +22,7 @@
 const crypto = require("crypto");
 
 const MODEL = process.env.DAF_MODEL || "claude-sonnet-5";
+const EFFORT = ["low", "medium", "high"].indexOf(process.env.DAF_EFFORT) > -1 ? process.env.DAF_EFFORT : "medium";
 const QUOTA = Math.max(1, parseInt(process.env.DAF_DAILY_QUOTA || "10", 10) || 10);
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
@@ -266,7 +270,7 @@ async function callClaude(content, schema, maxTokens) {
         max_tokens: maxTokens,
         system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: content }],
-        output_config: { format: { type: "json_schema", schema: schema } }
+        output_config: { effort: EFFORT, format: { type: "json_schema", schema: schema } }
       }),
       signal: ctrl.signal
     });
