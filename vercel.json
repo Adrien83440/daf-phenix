@@ -1,0 +1,6 @@
+{
+  "cleanUrls": true,
+  "functions": {
+    "api/daf.js": { "maxDuration": 300 }
+  }
+}
