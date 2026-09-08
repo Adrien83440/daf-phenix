@@ -136,6 +136,40 @@ const RAPPORT_SCHEMA = obj({
   mot_du_daf: { type: "string", description: "2 à 3 lignes, le mot de la fin du DAF au dirigeant" }
 });
 
+// Le schéma complet du rapport (68 propriétés, 13 objets imbriqués) dépasse ce
+// que l'API accepte en sortie structurée : « The compiled grammar is too
+// large ». Chaque module ne remplit de toute façon qu'une partie des sections
+// (les prompts disent « Laisse vides : … ») : on n'envoie donc à l'API que les
+// sections du module, et le serveur complète les autres avec leur valeur vide
+// ([] , "" ou 0). La forme reçue par l'outil reste exactement RAPPORT_SCHEMA.
+const RAPPORT_COMMUN = ["titre", "resume", "kpis", "diagnostic", "plan_90_jours", "hypotheses", "questions", "mot_du_daf"];
+const RAPPORT_SECTIONS = {
+  audit:  ["score", "fuites", "opportunites"],
+  plan:   ["opportunites", "feuille_de_route"],
+  treso:  ["allocation", "automatisations", "fuites"],
+  fuites: ["fuites"],
+  dettes: ["dettes", "strategie_dettes"]
+};
+function schemaRapport(mod) {
+  const garde = RAPPORT_COMMUN.concat(RAPPORT_SECTIONS[mod] || []);
+  const props = {};
+  Object.keys(RAPPORT_SCHEMA.properties).forEach(function (k) { if (garde.indexOf(k) > -1) props[k] = RAPPORT_SCHEMA.properties[k]; });
+  return obj(props);
+}
+function valeurVide(schema) {
+  if (schema.type === "array") return [];
+  if (schema.type === "object") { const o = {}; Object.keys(schema.properties).forEach(function (k) { o[k] = valeurVide(schema.properties[k]); }); return o; }
+  if (schema.type === "number" || schema.type === "integer") return 0;
+  return "";
+}
+function rapportComplet(data) {
+  const out = {};
+  Object.keys(RAPPORT_SCHEMA.properties).forEach(function (k) {
+    out[k] = (data && data[k] !== undefined && data[k] !== null) ? data[k] : valeurVide(RAPPORT_SCHEMA.properties[k]);
+  });
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 //  Codes d'accès
 // ---------------------------------------------------------------------------
@@ -294,7 +328,8 @@ async function analyse(body) {
     { type: "text", text: data, cache_control: { type: "ephemeral" } },
     { type: "text", text: MODULE_PROMPTS[mod] }
   ];
-  return callClaude(content, RAPPORT_SCHEMA, 20000);
+  const out = await callClaude(content, schemaRapport(mod), 20000);
+  return { data: rapportComplet(out.data), usage: out.usage };
 }
 
 // ---------------------------------------------------------------------------
@@ -366,4 +401,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, consumeRun: consumeRun, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
+module.exports._internal = { checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, consumeRun: consumeRun, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
