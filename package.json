@@ -4,5 +4,5 @@
   "private": true,
   "description": "DAF Phénix (dirigeants de TPE/PME) et Phénix Perso (particuliers) — directeur financier IA, site statique + fonctions Vercel",
   "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test test/*.test.js", "test:ui": "node test/ui/run.js" }
+  "scripts": { "test": "node --test test/*.test.js", "test:ui": "node test/ui/run.js", "admin:hash": "node scripts/admin-hash.js" }
 }

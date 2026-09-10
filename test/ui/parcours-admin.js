@@ -14,14 +14,23 @@
 
   (async function () {
     try {
-      // connexion
-      setVal("admin-key", "faux"); click("btn-login");
+      // connexion par e-mail et mot de passe
+      ok(!$("login-account").hidden && $("login-key").hidden, "connexion : formulaire e-mail + mot de passe par défaut");
+      setVal("login-email", "adrien@exemple.com"); setVal("login-password", "faux"); click("btn-login");
       await wait(function () { return $("login-err").textContent; });
-      ok(/incorrecte/.test($("login-err").textContent), "connexion : clé refusée");
-      setVal("admin-key", "admin-test"); click("btn-login");
+      ok(/incorrect/.test($("login-err").textContent), "connexion : mot de passe refusé");
+      click("btn-login-mode"); ok(!$("login-key").hidden && $("login-account").hidden, "connexion : bascule vers la clé admin");
+      setVal("admin-key", "faux"); click("btn-login");
+      await wait(function () { return /Connexion requise|incorrecte/.test($("login-err").textContent); });
+      ok(true, "connexion : mauvaise clé refusée");
+      click("btn-login-mode");
+      setVal("login-email", "ADRIEN@exemple.com"); setVal("login-password", "mon mot de passe"); click("btn-login");
       await wait(function () { return !$("app").hidden; });
       ok(on("dash"), "connexion : tableau de bord affiché");
-      ok(sessionStorage.getItem("daf.admin") === "admin-test", "connexion : clé gardée pour la session");
+      var sess = JSON.parse(sessionStorage.getItem("daf.admin"));
+      ok(sess && sess.token && !sess.key, "connexion : jeton de session gardé, pas de clé");
+      await wait(function () { return /adrien@exemple.com/.test($("chip-who").textContent); });
+      ok(true, "en-tête : compte connecté affiché");
       ok(!$("dash-warn").hidden && /Aucun stockage persistant/.test($("dash-warn").textContent), "tableau de bord : avertissement mémoire seule");
       ok(/Mémoire seule/.test($("chip-store").textContent), "en-tête : puce stockage");
       ok(/0 analyses/.test(txt($("dash-kpis"))), "tableau de bord : compteurs à zéro");
@@ -125,7 +134,27 @@
       // réglages
       $("nav").querySelector('[data-v="settings"]').click();
       ok(/ANTHROPIC_API_KEY/.test($("settings-table").textContent) && /définie/.test($("settings-table").textContent), "réglages : variables");
+      ok(/DAF_ADMINS/.test($("settings-table").textContent), "réglages : variable des comptes listée");
       ok(/Storage/.test($("settings-store").textContent), "réglages : guide KV affiché quand le stockage manque");
+      await wait(function () { return /adrien@exemple.com/.test($("acc-table").textContent); });
+      ok(/toi/.test($("acc-table").textContent) && /variable DAF_ADMINS/.test($("acc-table").textContent), "comptes : le mien, défini par la variable");
+      ok(!$("acc-pw-current-wrap").hidden && $("acc-pw-email-wrap").hidden, "comptes : changement de mot de passe avec l'actuel");
+      setVal("acc-pw-current", "faux"); setVal("acc-pw-new", "nouveau mot de passe"); click("acc-pw-save");
+      await wait(function () { return $("acc-pw-err").textContent; });
+      ok(/actuel incorrect/.test($("acc-pw-err").textContent), "comptes : mot de passe actuel vérifié");
+      setVal("acc-pw-current", "mon mot de passe"); setVal("acc-pw-new", "nouveau mot de passe"); click("acc-pw-save");
+      await wait(function () { return !$("acc-envline").hidden; });
+      ok(/^adrien@exemple\.com:scrypt\$/.test($("acc-envline-txt").value), "comptes : sans KV, la ligne DAF_ADMINS est proposée");
+      await wait(function () { return /la console/.test($("acc-table").textContent); });
+      ok(true, "comptes : le compte passe « défini par la console »");
+      var lg = await api("/api/admin", { action: "login", email: "adrien@exemple.com", password: "nouveau mot de passe" });
+      ok(lg.ok, "comptes : le nouveau mot de passe fonctionne");
+      setVal("acc-add-email", "assistant@exemple.com"); setVal("acc-add-pw", "assistant2026"); click("acc-add-save");
+      await wait(function () { return /assistant@exemple.com/.test($("acc-table").textContent); });
+      ok($("acc-table").querySelector("[data-acc-del]"), "comptes : compte ajouté, retirable");
+      $("acc-table").querySelector("[data-acc-del]").click();
+      await wait(function () { return !/assistant@exemple.com/.test($("acc-table").textContent); });
+      ok(true, "comptes : compte retiré");
 
       // suppression
       $("nav").querySelector('[data-v="clients"]').click();

@@ -152,11 +152,20 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     <div class="glass panel login">
       <h1 class="h-title">Console Phénix</h1>
       <p class="h-sub">Clients, accès, usage et coût des deux produits : DAF Phénix (entreprises) et Phénix Perso (particuliers).</p>
-      <label class="lbl" for="admin-key">Clé admin</label>
-      <input class="field mono" id="admin-key" type="password" autocomplete="current-password" placeholder="DAF_ADMIN_KEY">
+      <div id="login-account">
+        <label class="lbl" for="login-email">E-mail</label>
+        <input class="field" id="login-email" type="email" autocomplete="username" placeholder="toi@exemple.com">
+        <label class="lbl" for="login-password">Mot de passe</label>
+        <input class="field" id="login-password" type="password" autocomplete="current-password">
+      </div>
+      <div id="login-key" hidden>
+        <label class="lbl" for="admin-key">Clé admin</label>
+        <input class="field mono" id="admin-key" type="password" autocomplete="off" placeholder="DAF_ADMIN_KEY">
+      </div>
       <div class="err" id="login-err"></div>
       <button class="btn primary wide" id="btn-login" type="button">Entrer</button>
-      <p class="hint" style="text-align:center;margin-top:10px">La clé reste dans cet onglet le temps de la session.</p>
+      <p class="hint" style="text-align:center;margin-top:10px"><button type="button" class="chip chip-btn" id="btn-login-mode">Utiliser la clé admin à la place</button></p>
+      <p class="hint" style="text-align:center">Session de 12 heures, gardée dans cet onglet. Comptes : variable DAF_ADMINS ou onglet Réglages.</p>
     </div>
   </section>
 
@@ -165,6 +174,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     <header class="top glass">
       <div class="brand"><span class="mark"><svg><use href="#i-flame"/></svg></span>Console Phénix</div>
       <div class="top-right">
+        <span class="chip" id="chip-who"><i></i><span>…</span></span>
         <span class="chip" id="chip-env"><i></i><span>…</span></span>
         <span class="chip" id="chip-store"><i></i><span>…</span></span>
         <button class="chip chip-btn" id="btn-refresh" type="button">Actualiser</button>
@@ -322,6 +332,29 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
         <h2 style="font-size:22px;margin-bottom:4px">Réglages et santé</h2>
         <p class="h-sub">Tout se règle dans les variables d'environnement Vercel (Settings → Environment Variables, puis Redeploy).</p>
         <div class="kpis" id="settings-kpis"></div>
+        <div class="sec" id="settings-account">
+          <h3>Comptes de la console</h3>
+          <p class="hint" id="acc-hint" style="margin-bottom:10px"></p>
+          <div class="tbl-wrap" style="margin-bottom:12px"><table id="acc-table"></table></div>
+          <div class="grid g2">
+            <div class="soft" style="padding:14px">
+              <b style="font-weight:500" id="acc-pw-title">Changer mon mot de passe</b>
+              <div id="acc-pw-email-wrap" hidden><label class="lbl" for="acc-pw-email">E-mail du compte</label><input class="field" id="acc-pw-email" type="email" placeholder="toi@exemple.com"></div>
+              <div id="acc-pw-current-wrap"><label class="lbl" for="acc-pw-current">Mot de passe actuel</label><input class="field" id="acc-pw-current" type="password" autocomplete="current-password"></div>
+              <label class="lbl" for="acc-pw-new">Nouveau mot de passe (8 caractères minimum)</label><input class="field" id="acc-pw-new" type="password" autocomplete="new-password">
+              <div class="err" id="acc-pw-err"></div>
+              <button class="btn primary small" id="acc-pw-save" type="button">Enregistrer</button>
+            </div>
+            <div class="soft" style="padding:14px">
+              <b style="font-weight:500">Ajouter un compte</b>
+              <label class="lbl" for="acc-add-email">E-mail</label><input class="field" id="acc-add-email" type="email" placeholder="assistant@exemple.com">
+              <label class="lbl" for="acc-add-pw">Mot de passe (8 caractères minimum)</label><input class="field" id="acc-add-pw" type="password" autocomplete="new-password">
+              <div class="err" id="acc-add-err"></div>
+              <button class="btn ghost small" id="acc-add-save" type="button">Ajouter</button>
+            </div>
+          </div>
+          <div id="acc-envline" hidden style="margin-top:12px"><p class="hint">Sans stockage KV, ce compte ne survit pas au prochain redémarrage : ajoute cette ligne à la variable <span class="mono">DAF_ADMINS</span> sur Vercel (plusieurs comptes séparés par des virgules), puis redéploie.</p><textarea class="field mono" id="acc-envline-txt" style="min-height:70px;font-size:12.5px" readonly></textarea><div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-copy="acc-envline-txt">Copier</button></div></div>
+        </div>
         <div class="sec"><h3>Variables</h3><div class="tbl-wrap"><table id="settings-table"></table></div></div>
         <div class="sec" id="settings-store"></div>
       </div>
@@ -350,7 +383,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     perso: "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : {lien}\nCode d'accès : {code}\n\nColle ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Ton espace se met à jour à chaque bilan. Jusqu'à {quota} bilans par jour. Accès valable jusqu'au {expiration}."
   };
   var $ = function (id) { return document.getElementById(id); };
-  var S = { key: "", ov: null, clients: [], events: [], fp: "", fs: "", fq: "", ap: "", aerr: false, last: null };
+  var S = { key: "", token: "", me: null, ov: null, clients: [], events: [], fp: "", fs: "", fq: "", ap: "", aerr: false, last: null, loginMode: "account" };
 
   // --- utilitaires -----------------------------------------------------------
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
@@ -364,7 +397,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   function toast(msg, bad) { var t = $("toast"); t.textContent = msg; t.className = "toast glass on" + (bad ? " bad" : ""); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = "toast glass"; }, bad ? 5000 : 2600); }
   function copy(text, label) { var done = function () { toast((label || "Copié") + "."); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done); else done(); }
   function api(p) {
-    p.adminKey = S.key;
+    if (S.token) p.adminToken = S.token; else p.adminKey = S.key;
     return fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(p) })
       .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { return { ok: false, error: "Réponse illisible (" + r.status + ")." }; } }); })
       .catch(function () { return { ok: false, error: "Serveur injoignable." }; });
@@ -383,19 +416,80 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   }
 
   // --- connexion ---------------------------------------------------------------
+  function setLoginMode(m) {
+    S.loginMode = m;
+    $("login-account").hidden = m !== "account"; $("login-key").hidden = m !== "key";
+    $("btn-login-mode").textContent = m === "account" ? "Utiliser la clé admin à la place" : "Me connecter avec mon e-mail";
+  }
   function login() {
-    var k = $("admin-key").value.trim(); $("login-err").textContent = "";
-    if (!k) { $("login-err").textContent = "Entre la clé admin."; return; }
-    var b = $("btn-login"); b.disabled = true; S.key = k;
-    api({ action: "overview" }).then(function (j) {
-      b.disabled = false;
-      if (!j.ok) { S.key = ""; $("login-err").textContent = j.error || "Refusé."; return; }
-      try { sessionStorage.setItem("daf.admin", k); } catch (e) {}
-      S.ov = j; $("v-login").classList.remove("on"); $("app").hidden = false;
-      renderAll(); loadClients();
+    $("login-err").textContent = "";
+    var b = $("btn-login"); b.disabled = true;
+    var start = function () {
+      return api({ action: "overview" }).then(function (j) {
+        b.disabled = false;
+        if (!j.ok) { S.key = ""; S.token = ""; $("login-err").textContent = j.error || "Refusé."; return; }
+        try { sessionStorage.setItem("daf.admin", JSON.stringify({ key: S.key, token: S.token })); } catch (e) {}
+        S.ov = j; $("v-login").classList.remove("on"); $("app").hidden = false;
+        renderAll(); loadClients(); loadMe();
+      });
+    };
+    if (S.loginMode === "key") {
+      var k = $("admin-key").value.trim();
+      if (!k) { b.disabled = false; $("login-err").textContent = "Entre la clé admin."; return; }
+      S.key = k; S.token = ""; start(); return;
+    }
+    var email = $("login-email").value.trim(), pw = $("login-password").value;
+    if (!email || !pw) { b.disabled = false; $("login-err").textContent = "Entre ton e-mail et ton mot de passe."; return; }
+    fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "login", email: email, password: pw }) })
+      .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { return { ok: false, error: "Réponse illisible." }; } }); }, function () { return { ok: false, error: "Serveur injoignable." }; })
+      .then(function (j) {
+        if (!j.ok) { b.disabled = false; $("login-err").textContent = j.error || "Refusé."; return; }
+        S.token = j.token; S.key = ""; $("login-password").value = ""; start();
+      });
+  }
+  function logout() { S.key = ""; S.token = ""; try { sessionStorage.removeItem("daf.admin"); } catch (e) {} location.reload(); }
+  function loadMe() {
+    return api({ action: "me" }).then(function (j) {
+      if (!j.ok) return;
+      S.me = j;
+      $("chip-who").className = "chip " + (j.byKey ? "warn" : "ok"); $("chip-who").lastElementChild.textContent = j.byKey ? "Clé admin" : j.email;
+      renderAccounts();
     });
   }
-  function logout() { S.key = ""; try { sessionStorage.removeItem("daf.admin"); } catch (e) {} location.reload(); }
+  function renderAccounts() {
+    var me = S.me || {};
+    $("acc-pw-title").textContent = me.byKey ? "Créer ou réinitialiser un compte" : "Changer mon mot de passe";
+    $("acc-pw-email-wrap").hidden = !me.byKey; $("acc-pw-current-wrap").hidden = !!me.byKey;
+    $("acc-hint").textContent = me.canPersist ? "Les comptes créés ici sont conservés (stockage KV) et priment sur la variable DAF_ADMINS pour la même adresse." : "Sans stockage KV, un compte créé ici ne tient que jusqu'au prochain redémarrage : la console te donne la ligne à mettre dans la variable DAF_ADMINS.";
+    api({ action: "admins" }).then(function (j) {
+      if (!j.ok) return;
+      $("acc-table").innerHTML = "<tr><th>E-mail</th><th>Défini par</th><th></th></tr>" + (j.admins.length ? j.admins.map(function (a) {
+        return "<tr><td>" + esc(a.email) + (me.email === a.email ? ' <span class="badge ok">toi</span>' : "") + "</td><td>" + (a.source === "console" ? "la console" : "la variable DAF_ADMINS") + '</td><td class="num">' + (me.email === a.email ? "" : '<button class="btn danger small" type="button" data-acc-del="' + esc(a.email) + '">Retirer</button>') + "</td></tr>";
+      }).join("") : '<tr><td colspan="3" class="hint" style="padding:14px">Aucun compte : la console n\'est accessible que par la clé admin. Crée ton compte ci-dessous.</td></tr>');
+    });
+  }
+  function showEnvLine(line) { $("acc-envline").hidden = !line; if (line) $("acc-envline-txt").value = line; }
+  function savePassword() {
+    $("acc-pw-err").textContent = "";
+    var body = { action: "password", password: $("acc-pw-new").value };
+    if (S.me && S.me.byKey) body.email = $("acc-pw-email").value.trim(); else body.current = $("acc-pw-current").value;
+    api(body).then(function (j) {
+      if (!j.ok) { $("acc-pw-err").textContent = j.error || "Erreur."; return; }
+      $("acc-pw-new").value = ""; $("acc-pw-current").value = "";
+      if (j.token && !(S.me && S.me.byKey)) { S.token = j.token; try { sessionStorage.setItem("daf.admin", JSON.stringify({ key: "", token: S.token })); } catch (e) {} }
+      showEnvLine(j.envLine); toast(j.persisted ? "Mot de passe enregistré." : "Mot de passe enregistré pour cette instance : reporte la ligne dans DAF_ADMINS.");
+      renderAccounts();
+    });
+  }
+  function addAccount() {
+    $("acc-add-err").textContent = "";
+    api({ action: "admin_set", email: $("acc-add-email").value.trim(), password: $("acc-add-pw").value }).then(function (j) {
+      if (!j.ok) { $("acc-add-err").textContent = j.error || "Erreur."; return; }
+      $("acc-add-email").value = ""; $("acc-add-pw").value = "";
+      showEnvLine(j.envLine); toast(j.persisted ? "Compte ajouté." : "Compte ajouté pour cette instance : reporte la ligne dans DAF_ADMINS.");
+      renderAccounts();
+    });
+  }
   function refresh() {
     return api({ action: "overview" }).then(function (j) {
       if (!j.ok) { toast(j.error || "Erreur", true); return; }
@@ -587,7 +681,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     $("settings-kpis").innerHTML = [["Modèle", c.model, "effort " + c.effort], ["Quota Pro", c.quotaPro + " / jour", "DAF_DAILY_QUOTA"], ["Quota Perso", c.quotaPerso + " / jour", "PERSO_DAILY_QUOTA"], ["Tarifs retenus", c.prices.in + " $ / " + c.prices.out + " $", "par million de jetons, entrée / sortie"], ["Stockage", st.backend === "kv" ? (st.ok ? "KV connecté" : "KV en panne") : "Mémoire d'instance", st.backend === "kv" ? "clients et activité conservés" : "rien n'est conservé"], ["Environnement", c.env || "—", c.region || ""]]
       .map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v" style="font-size:19px">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("");
     var rows = [
-      ["ANTHROPIC_API_KEY", c.configured.api, "clé API Anthropic"], ["DAF_ACCESS_SECRET", c.configured.secret, "signe tous les codes : ne jamais le changer"], ["DAF_ADMIN_KEY", c.configured.admin, "cette console"], ["DAF_BRIDGE_KEY", c.configured.bridge, "pont Academy (facultatif)"],
+      ["ANTHROPIC_API_KEY", c.configured.api, "clé API Anthropic"], ["DAF_ACCESS_SECRET", c.configured.secret, "signe tous les codes : ne jamais le changer"], ["DAF_ADMIN_KEY", c.configured.admin, "clé de secours de la console et appels serveur (Make)"], ["DAF_ADMINS", !!c.configured.admins, "comptes e-mail + mot de passe (npm run admin:hash)"], ["DAF_SESSION_SECRET", !!c.configured.sessionSecret, "signe les sessions (facultatif, sinon DAF_ACCESS_SECRET)"], ["DAF_BRIDGE_KEY", c.configured.bridge, "pont Academy (facultatif)"],
       ["KV_REST_API_URL / KV_REST_API_TOKEN", st.backend === "kv", "Vercel KV ou Upstash (facultatif, recommandé)"],
       ["DAF_REVOKED", c.revokedEnv.pro.length ? c.revokedEnv.pro.join(", ") : "", "identifiants Pro révoqués par variable"], ["PERSO_REVOKED", c.revokedEnv.perso.length ? c.revokedEnv.perso.join(", ") : "", "identifiants Perso révoqués par variable"],
       ["DAF_ACCESS_CODES", c.staticCodes.pro.length ? c.staticCodes.pro.join(", ") : "", "codes fixes Pro"], ["PERSO_ACCESS_CODES", c.staticCodes.perso.length ? c.staticCodes.perso.join(", ") : "", "codes fixes Perso"]
@@ -603,12 +697,16 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   // --- événements --------------------------------------------------------------
   function bind() {
     $("btn-login").addEventListener("click", login);
-    $("admin-key").addEventListener("keydown", function (e) { if (e.key === "Enter") login(); });
+    ["admin-key", "login-email", "login-password"].forEach(function (id) { $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") login(); }); });
+    $("btn-login-mode").addEventListener("click", function () { setLoginMode(S.loginMode === "account" ? "key" : "account"); });
+    $("acc-pw-save").addEventListener("click", savePassword);
+    $("acc-add-save").addEventListener("click", addAccount);
     $("btn-logout").addEventListener("click", logout);
     $("btn-refresh").addEventListener("click", refresh);
     document.querySelectorAll("#nav button").forEach(function (b) { b.addEventListener("click", function () { show(b.dataset.v); }); });
     document.addEventListener("click", function (e) {
       var go = e.target.closest("[data-go]"); if (go) { show(go.dataset.go); return; }
+      var ad = e.target.closest("[data-acc-del]"); if (ad) { if (!window.confirm("Retirer le compte " + ad.dataset.accDel + " ?")) return; api({ action: "admin_delete", email: ad.dataset.accDel }).then(function (j) { if (!j.ok) return toast(j.error, true); toast(j.stillInEnv ? "Compte retiré de la console ; il reste défini par la variable DAF_ADMINS." : "Compte retiré."); renderAccounts(); }); return; }
       var ct = e.target.closest("[data-copy-text]"); if (ct) { copy(ct.dataset.copyText, "Copié"); return; }
       var cp = e.target.closest("[data-copy]"); if (cp) { var el = $(cp.dataset.copy); copy(el.value !== undefined && el.tagName !== "B" ? el.value : el.textContent, "Copié"); return; }
       var cl = e.target.closest("[data-copy-link]"); if (cl) { e.stopPropagation(); var c = findClient(cl.dataset.copyLink); if (c) copy("Lien : " + LINKS[c.product] + "\nCode d'accès : " + c.code, "Lien et code copiés"); return; }
@@ -639,8 +737,17 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   }
 
   function init() {
-    bind();
-    try { var k = sessionStorage.getItem("daf.admin"); if (k) { $("admin-key").value = k; login(); } } catch (e) {}
+    bind(); setLoginMode("account");
+    try {
+      var saved = JSON.parse(sessionStorage.getItem("daf.admin") || "null");
+      if (saved && (saved.token || saved.key)) {
+        S.token = saved.token || ""; S.key = saved.key || "";
+        api({ action: "overview" }).then(function (j) {
+          if (!j.ok) { S.token = ""; S.key = ""; sessionStorage.removeItem("daf.admin"); $("login-err").textContent = j.error && /expirée/.test(j.error) ? j.error : ""; return; }
+          S.ov = j; $("v-login").classList.remove("on"); $("app").hidden = false; renderAll(); loadClients(); loadMe();
+        });
+      }
+    } catch (e) {}
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();

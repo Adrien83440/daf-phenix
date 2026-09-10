@@ -13,6 +13,7 @@
 process.env.ANTHROPIC_API_KEY = "test-key"; process.env.DAF_ACCESS_SECRET = "secret-de-test"; process.env.DAF_ADMIN_KEY = "admin-test";
 process.env.DAF_DAILY_QUOTA = "10"; process.env.PERSO_DAILY_QUOTA = "5"; delete process.env.KV_REST_API_URL; delete process.env.KV_REST_API_TOKEN;
 const fs = require("fs"), path = require("path");
+process.env.DAF_ADMINS = "adrien@exemple.com:" + require(path.join(__dirname, "..", "..", "lib", "auth.js")).hashPassword("mon mot de passe");
 let JSDOM, VirtualConsole;
 try { ({ JSDOM, VirtualConsole } = require("jsdom")); }
 catch (e) { console.error("jsdom manquant : lance d'abord  npm install --no-save jsdom"); process.exit(2); }

@@ -33,7 +33,9 @@ daf-phenix/
    |---|---|---|
    | `ANTHROPIC_API_KEY` | oui | ta clé API Anthropic |
    | `DAF_ACCESS_SECRET` | oui | secret qui signe les codes clients. 30 caractères au hasard, à ne jamais changer ensuite (sinon tous les codes émis meurent) |
-   | `DAF_ADMIN_KEY` | oui | mot de passe de `/admin` |
+   | `DAF_ADMIN_KEY` | oui | clé de secours de la console et clé des appels serveur (`mint` depuis Make) |
+   | `DAF_ADMINS` | recommandé | comptes de la console, `email:hash` séparés par des virgules ; le hash vient de `npm run admin:hash -- email motdepasse` |
+   | `DAF_SESSION_SECRET` | non | signe les sessions de la console (sinon `DAF_ACCESS_SECRET` est utilisé) |
    | `DAF_MODEL` | non | `claude-sonnet-5` par défaut |
    | `DAF_DAILY_QUOTA` | non | analyses par jour et par code, `10` par défaut (un audit complet = 1) |
    | `DAF_ACCESS_CODES` | non | codes fixes : `PHENIX2026:Offre lancement:2026-12-31,VIP:Client VIP` (date d'expiration facultative) |
@@ -48,20 +50,24 @@ daf-phenix/
 
 ## La console admin
 
-`https://ton-domaine/admin`, clé `DAF_ADMIN_KEY`. Six onglets :
+`https://ton-domaine/admin`. Connexion par **e-mail et mot de passe** (session de 12 heures), ou par la clé `DAF_ADMIN_KEY` en secours.
+
+**Créer ton compte.** En local : `npm run admin:hash -- toi@exemple.com "ton mot de passe"` affiche la ligne `DAF_ADMINS=…` à coller dans les variables Vercel, puis redéploie. Ou bien : connecte-toi une fois avec la clé, Réglages → « Créer ou réinitialiser un compte » ; avec Vercel KV le compte est conservé, sans KV la console te donne la ligne à mettre dans `DAF_ADMINS`. Les mots de passe sont hachés (scrypt), jamais stockés en clair ; mot de passe oublié : même procédure, la clé ou la variable te permettent toujours de repartir. Plusieurs comptes possibles (Réglages → « Ajouter un compte »), huit échecs de connexion bloquent l'adresse IP un quart d'heure.
+
+Six onglets :
 
 - **Tableau de bord** : santé (clé API, secret, stockage, région), analyses et coût du jour, des 7 et 30 derniers jours, coût moyen par analyse, erreurs IA, graphique 30 jours Pro / Perso, clients actifs et qui expirent bientôt, dernière activité.
 - **Clients** : tous les accès Pro et Perso avec statut (actif, expire bientôt, expiré, révoqué, remplacé), date d'expiration, bilans du jour sur quota, analyses et appels cumulés, coût, dernier usage. Filtres par produit et statut, recherche. Un clic ouvre la fiche : nom, e-mail, note, quota personnalisé, message prêt à envoyer, **prolonger** (nouveau code, l'ancien est révoqué), **révoquer / réactiver** (effet immédiat), **supprimer**. Les codes vus dans l'activité mais jamais enregistrés (Academy, codes fixes, codes émis avant la console) apparaissent comme « non enregistrés » et peuvent être enregistrés.
 - **Nouvel accès** : produit, nom, durée, e-mail, quota, note → code, lien, message et bouton e-mail. Aussi : enregistrer un code existant, vérifier un code.
 - **Activité** : un événement par appel IA (client, lecture ou module, réussite ou échec, durée, jetons, coût), filtres, et le détail jour par jour.
 - **Liens et messages** : les trois adresses à fournir (`/` pour les dirigeants, `/perso` pour les particuliers, `/admin` pour toi) et les modèles de message par produit, modifiables (variables `{nom}`, `{code}`, `{lien}`, `{expiration}`, `{quota}`), gardés dans ton navigateur.
-- **Réglages** : état des variables d'environnement, listes de révocation et codes fixes, tarifs retenus, guide de branchement du stockage.
+- **Réglages** : comptes de la console (changer son mot de passe, ajouter, retirer), état des variables d'environnement, listes de révocation et codes fixes, tarifs retenus, guide de branchement du stockage.
 
 **Stockage.** Sans base, la console ne voit que ce qui s'est passé depuis le dernier démarrage de la fonction, et une révocation faite ici ne tient que jusqu'au prochain redémarrage. Pour que tout soit conservé : sur Vercel, Storage → Create Database → **KV** (Upstash), rattache-la au projet, redéploie. Les deux variables sont posées automatiquement, rien d'autre à installer, et `lib/store.js` bascule seul. Les outils Pro et Perso fonctionnent dans les deux cas, et continuent de fonctionner en mémoire si KV tombe en panne.
 
 **Codes.** `PHX-LECOMPTOIR-2709-K7QM3XZ2` (Pro) ou `PXP-MARIE-2710-…` (Perso) : identifiant, mois d'expiration (fin de mois), signature. Vérifiés par calcul : un code reste valable même si la base est vide, et un code Pro ouvre aussi l'espace Perso. Révocation : depuis la console (immédiate, conservée avec KV) ou par les variables `DAF_REVOKED` / `PERSO_REVOKED` (identifiant entre le préfixe et la date, redéploiement nécessaire). Quota par défaut `DAF_DAILY_QUOTA` / `PERSO_DAILY_QUOTA`, ou personnalisé par client depuis sa fiche.
 
-**API de la console** (`POST /api/admin`, `adminKey` dans le corps ou en-tête `X-Admin-Key`) : `overview`, `clients`, `events`, `mint {product, name, months, email, note, quota}`, `import {code, name, email, note}`, `update {code, name, email, note, quota}`, `extend {code, months}`, `revoke {code}`, `unrevoke {code}`, `delete {code}`, `verify {code}`. Les fonctions `/api/daf` et `/api/perso` gardent leur action `mint` (même clé) pour un scénario Make après paiement : le code émis est enregistré dans la console avec `email` et `note` s'ils sont fournis.
+**API de la console** (`POST /api/admin`, jeton de session `adminToken` obtenu par `login {email, password}`, ou `adminKey` dans le corps / en-tête `X-Admin-Key`) : `me`, `password`, `admins`, `admin_set`, `admin_delete`, `overview`, `clients`, `events`, `mint {product, name, months, email, note, quota}`, `import {code, name, email, note}`, `update {code, name, email, note, quota}`, `extend {code, months}`, `revoke {code}`, `unrevoke {code}`, `delete {code}`, `verify {code}`. Les fonctions `/api/daf` et `/api/perso` gardent leur action `mint` (même clé) pour un scénario Make après paiement : le code émis est enregistré dans la console avec `email` et `note` s'ils sont fournis.
 
 ## Ce que fait l'outil
 

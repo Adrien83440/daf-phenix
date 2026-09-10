@@ -41,7 +41,7 @@ test("overview : configuration et totaux à zéro", async function () {
   assert.equal(r.status, 200);
   const j = r.json;
   assert.equal(j.config.store.backend, "memory");
-  assert.deepEqual(j.config.configured, { api: true, secret: true, admin: true, bridge: true });
+  assert.deepEqual(j.config.configured, { api: true, secret: true, admin: true, bridge: true, admins: 0, sessionSecret: false });
   assert.equal(j.config.quotaPro, 3); assert.equal(j.config.quotaPerso, 2);
   assert.deepEqual(j.config.revokedEnv.pro, ["ENVBANNI"]);
   assert.equal(j.days.length, 30);
