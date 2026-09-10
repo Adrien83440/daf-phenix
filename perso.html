@@ -512,12 +512,26 @@ select.field option{color:#111;background:#fff}
 .jv-type{display:flex;gap:8px;width:100%;max-width:560px}
 .jv-type .field{flex:1;padding:12px 14px;border-radius:999px}
 .jv-alt{color:var(--ink3);font-size:13px;text-decoration:none}
+.nova-btn{display:flex;align-items:center;gap:18px;width:100%;padding:16px 20px;border-radius:24px;border:1.5px solid rgba(123,79,184,.6);background:linear-gradient(135deg,rgba(123,79,184,.35),rgba(232,114,44,.22) 60%,rgba(220,168,78,.25));color:var(--ink);cursor:pointer;text-align:left;box-shadow:0 20px 50px -20px rgba(123,79,184,.8),0 1px 0 rgba(255,255,255,.25) inset;transition:transform .15s,box-shadow .3s;margin-top:14px}
+.nova-btn:hover{box-shadow:0 24px 60px -18px rgba(232,114,44,.8),0 1px 0 rgba(255,255,255,.25) inset}
+.nova-btn:active{transform:scale(.99)}
+.nova-btn .orb{width:72px;height:72px;flex:none}
+.nova-btn b{display:block;font-family:var(--serif);font-size:24px;font-weight:500;line-height:1.1}
+.nova-btn small{display:block;color:var(--ink2);font-size:13.5px;margin-top:4px;line-height:1.4}
+.nova-btn.locked{opacity:.75;border-style:dashed;box-shadow:none}
+.nova-btn.locked .orb{animation:none;filter:grayscale(.4)}
+.orb{border-radius:50%;background:radial-gradient(circle at 50% 40%,#F6D98A 0%,#E8722C 35%,#7B4FB8 70%,transparent 72%);box-shadow:0 0 40px rgba(232,114,44,.45),0 0 90px rgba(123,79,184,.35);animation:orb 3.2s ease-in-out infinite}
+.orb.mini{width:34px;height:34px;box-shadow:0 0 18px rgba(232,114,44,.5)}
+.fab-nova{position:fixed;right:16px;bottom:18px;z-index:40;display:flex;align-items:center;gap:10px;padding:8px 16px 8px 8px;border-radius:999px;border:1px solid rgba(123,79,184,.6);background:linear-gradient(135deg,rgba(28,20,40,.92),rgba(38,22,30,.92));color:var(--ink);cursor:pointer;font-size:14px;box-shadow:0 14px 34px -10px rgba(0,0,0,.7),0 0 30px rgba(123,79,184,.3);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.fab-nova b{font-family:var(--serif);font-weight:500;font-size:16px}
+.fab-nova:active{transform:scale(.97)}
 .live-card .orb{width:92px;height:92px;border-radius:50%;flex:none;background:radial-gradient(circle at 50% 40%,#F6D98A 0%,#E8722C 35%,#7B4FB8 70%,transparent 72%);box-shadow:0 0 40px rgba(232,114,44,.45),0 0 90px rgba(123,79,184,.35);animation:orb 3.2s ease-in-out infinite}
 @keyframes orb{50%{transform:scale(1.06);box-shadow:0 0 60px rgba(232,114,44,.6),0 0 120px rgba(123,79,184,.45)}}
 .live-card .lc{display:flex;gap:16px;align-items:center}
 .live-card p{color:var(--ink2);font-size:14px;line-height:1.45}
 .live-card .lock{font-size:12.5px;color:var(--ink3);margin-top:6px}
-@media (prefers-reduced-motion:reduce){.live-card .orb,.jv.thinking .jv-state i{animation:none}}
+@media (prefers-reduced-motion:reduce){.orb,.jv.thinking .jv-state i{animation:none}}
+@media print{.fab-nova{display:none!important}}
 .disc{margin-top:22px;padding:12px 14px;border-radius:var(--r2);border:1px solid var(--line);font-size:12px;color:var(--ink3);line-height:1.5}
 @media (min-width:640px){
   .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -535,6 +549,7 @@ select.field option{color:#111;background:#fff}
 // Réglages. Les trois champs de la politique de confidentialité sont à renseigner avant la mise en ligne (voir CONFORMITE-PERSO.md).
 window.PERSO_CONFIG = {
   endpoint: "/api/perso",
+  assistant: "Nova",  // prénom de l'assistante vocale (Premium), le même que PERSO_VOCAL_NOM côté serveur
   editeur: "",        // ex. "Adrien Émily EI, 12 rue …, 83440 …" (responsable du traitement)
   contact: "",        // ex. "contact@adrienemily.com" (demandes RGPD)
   privacyDate: ""     // ex. "10 septembre 2026"
@@ -571,7 +586,7 @@ window.PERSO_CONFIG = {
     <div class="brand"><span class="mark perso"><svg><use href="#i-flame"/></svg></span><span class="brand-name">Phénix Perso</span></div>
     <div class="top-right">
       <button class="chip chip-btn no-print" id="btn-home" type="button" hidden>Mon espace</button>
-      <button class="chip chip-btn gold no-print" id="btn-live" type="button" hidden>En direct</button>
+      <button class="chip chip-btn gold no-print" id="btn-live" type="button" hidden>Nova</button>
       <span class="chip" id="client-chip" hidden></span>
     </div>
   </header>
@@ -664,6 +679,7 @@ window.PERSO_CONFIG = {
         <div class="st soft"><span class="n">2</span><div><b>Vérifie ce que Phénix a compris</b><p>Revenus, dépenses par poste, abonnements, dettes : tu corriges ce qui cloche avant l'analyse.</p></div></div>
         <div class="st soft"><span class="n">3</span><div><b>Reçois ton plan</b><p>Score, fuites chiffrées, budget mois par mois, stratégie dettes et plan 90 jours à cocher. Ton espace se met à jour.</p></div></div>
       </div>
+      <button class="nova-btn" id="btn-nova" type="button"><span class="orb"></span><span><b>Parler à <span id="nova-nom">Nova</span></b><small id="nova-sub">Raconte-lui ce qui se passe, elle t'écoute, met ta situation à jour et te propose une action.</small></span></button>
       <button class="btn primary" id="btn-home-bilan" type="button" style="margin-top:14px"><svg><use href="#i-bolt"/></svg><span id="btn-home-bilan-txt">Faire mon bilan</span></button>
       <div class="hlinks" style="margin-top:10px">
         <button class="btn ghost" id="btn-home-hist" type="button">Mes analyses</button>
@@ -830,9 +846,9 @@ Forfait mobile 19,99"></textarea>
 <div class="jv" id="jarvis" hidden role="dialog" aria-modal="true" aria-label="Phénix en direct">
   <canvas id="jv-canvas" aria-hidden="true"></canvas>
   <div class="jv-top">
-    <span class="jv-brand">Phénix <em>en direct</em></span>
+    <span class="jv-brand"><em id="jv-nom">Nova</em> · Phénix</span>
     <span class="jv-state" id="jv-state"><i></i><span>prêt</span></span>
-    <button class="jv-close" id="jv-close" type="button" aria-label="Fermer">×</button>
+    <span style="display:flex;gap:8px"><button class="jv-close" id="jv-sound" type="button" aria-label="Sons" title="Sons d'ambiance">♪</button><button class="jv-close" id="jv-close" type="button" aria-label="Fermer">×</button></span>
   </div>
   <div class="jv-mid">
     <p class="jv-said" id="jv-said"></p>
@@ -878,6 +894,7 @@ Forfait mobile 19,99"></textarea>
   </div>
 </div>
 <div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+<button class="fab-nova no-print" id="fab-nova" type="button" hidden><span class="orb mini"></span><span>Parler à <b id="fab-nom">Nova</b></span></button>
 <script>
 var PERSO = (function () {
   "use strict";
@@ -1314,6 +1331,7 @@ var PERSO = (function () {
   var EDITEUR = CFG.editeur || "[Nom ou raison sociale de l'éditeur, adresse]";
   var CONTACT = CFG.contact || "[adresse e-mail de contact]";
   var PRIV_DATE = CFG.privacyDate || "10 septembre 2026";
+  var NOM = CFG.assistant || "Nova";
   var KEY = "phenix.perso.v1";
   var MAX_FILES = 5, MAX_FILES_BYTES = 3.5e6;
   var $ = function (id) { return document.getElementById(id); };
@@ -1324,7 +1342,7 @@ var PERSO = (function () {
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
     etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {}, checksAt: {},
     goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home", situReturn: "home",
-    premium: false, voix: false, vocal: { turns: [] }, actionsPerso: []
+    premium: false, voix: false, vocal: { turns: [] }, actionsPerso: [], vocalSons: true
   };
   var FIELDS = [
     ["revenus_mensuels", "Revenus nets / mois"], ["epargne_mensuelle", "Mis de côté / mois"], ["epargne_disponible", "Épargne disponible"],
@@ -1361,11 +1379,12 @@ var PERSO = (function () {
     id = id || currentScreen();
     $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass" || (id === "situ" && !S.history.length && !S.ctx.situation_texte);
     $("btn-live").hidden = !S.code || !S.consentAt || !S.premium || id === "gate" || id === "consent" || id === "pass";
+    $("fab-nova").hidden = !S.code || !S.consentAt || !S.premium || id === "home" || id === "gate" || id === "consent" || id === "pass" || id === "situ" || id === "run";
   }
 
   // --- persistance (appareil uniquement) --------------------------------------
   function persistable() {
-    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, checksAt: S.checksAt, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin, premium: S.premium, vocal: { turns: (S.vocal.turns || []).slice(-20) }, actionsPerso: S.actionsPerso };
+    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, checksAt: S.checksAt, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin, premium: S.premium, vocal: { turns: (S.vocal.turns || []).slice(-20) }, actionsPerso: S.actionsPerso, vocalSons: S.vocalSons !== false };
   }
   var save = debounce(function () { saveNow(); }, 500);
   function saveNow() { try { localStorage.setItem(KEY, JSON.stringify(persistable())); } catch (e) { /* stockage plein : on continue */ } }
@@ -1508,7 +1527,8 @@ var PERSO = (function () {
     if (run) {
       html += cardPlan(run) + cardProgress(run) + cardTip();
     }
-    html += cardLive() + cardSitu();
+    renderNova();
+    html += cardSitu();
     if (run) html += cardScore() + cardMois(run) + cardCoussin(run);
     html += cardGoals(run);
     if (run) {
@@ -1630,10 +1650,11 @@ var PERSO = (function () {
     ];
     return card("Tes progrès", '<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + k.map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("") + "</div>", { id: "card-progress", small: S.history.length + " bilan" + (S.history.length > 1 ? "s" : "") });
   }
-  function cardLive() {
-    var inner = '<div class="lc"><div class="orb"></div><div><p>' + (S.premium ? "Raconte-lui ce qui se passe, à voix haute : un changement, un coup dur, une question. Il répond, met ta situation à jour et te propose une action." : "Parle à Phénix à voix haute : il t'écoute, répond, met ta situation à jour et te propose une action. Réservé à l'offre Premium.") + "</p>" + (S.premium ? "" : '<div class="lock">Demande l\'accès Premium à l\'équipe Phénix.</div>') + "</div></div>" +
-      (S.premium ? '<div class="btns" style="margin-top:12px"><button class="btn primary small" type="button" id="btn-live-open">Parler à Phénix</button></div>' : "");
-    return card("Phénix en direct", inner, { wide: true, id: "card-live", small: S.premium ? "assistant vocal" : "Premium" });
+  function renderNova() {
+    var b = $("btn-nova");
+    b.classList.toggle("locked", !S.premium);
+    $("nova-nom").textContent = NOM; $("fab-nom").textContent = NOM; $("jv-nom").textContent = NOM; $("btn-live").textContent = NOM;
+    $("nova-sub").textContent = S.premium ? "Raconte-lui ce qui se passe, à voix haute : elle t'écoute, met ta situation à jour et te propose une action." : "Assistante vocale : elle t'écoute, met ta situation à jour et te propose une action. Réservée à l'offre Premium.";
   }
   function cardSitu() {
     var t = S.ctx.situation_texte, h = S.ctx.historique_situation || [];
@@ -2032,6 +2053,9 @@ var PERSO = (function () {
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closePriv(); if (JV.open) jvClose(); } });
     $("btn-home").addEventListener("click", goHome);
     $("btn-live").addEventListener("click", jvOpen);
+    $("btn-nova").addEventListener("click", jvOpen);
+    $("fab-nova").addEventListener("click", jvOpen);
+    $("jv-sound").addEventListener("click", function () { S.vocalSons = S.vocalSons === false; $("jv-sound").style.opacity = S.vocalSons ? "1" : ".4"; if (!S.vocalSons) sfxHum(false); else if (JV.state === "thinking") sfxHum(true); save(); toast(S.vocalSons ? "Sons d'ambiance activés." : "Sons d'ambiance coupés."); });
     $("jv-close").addEventListener("click", jvClose);
     $("jv-mic").addEventListener("click", function () { if (JV.state === "listening") jvStopListen(); else if (JV.state === "idle") { JV.textMode = false; $("jv-type").hidden = true; $("jv-toggle-type").textContent = "Écrire à la place"; jvListen(); } else if (JV.state === "speaking") { JVA.seq++; if (JVA.el) { try { JVA.el.pause(); } catch (e) {} } if (TTS) TTS.cancel(); JV.target = 0; jvSetState("idle", "Appuie et parle"); } });
     $("jv-toggle-type").addEventListener("click", function () { jvTextMode(!JV.textMode); });
@@ -2057,7 +2081,7 @@ var PERSO = (function () {
     $("home-grid").addEventListener("click", function (e) {
       var add = e.target.closest("#g-add"); if (add) { addGoal(); return; }
       if (e.target.id === "btn-situ-edit") { openSitu("home"); return; }
-      if (e.target.id === "btn-live-open") { jvOpen(); return; }
+
       var rm = e.target.closest(".goal .rm"); if (rm) { var id = rm.closest(".goal").dataset.id; S.goals = S.goals.filter(function (g) { return g.id !== id; }); saveNow(); renderHome(); return; }
       if (e.target.id === "tip-next") { S.tipOffset = (S.tipOffset || 0) + 1; $("tip-txt").textContent = PERSO.tipOfWeek(S.tipOffset); return; }
       if (e.target.id === "btn-ics") { icsReminder(); return; }
@@ -2115,23 +2139,50 @@ var PERSO = (function () {
   var JV = { open: false, state: "idle", level: 0, target: 0, rec: null, audio: null, analyser: null, stream: null, raf: 0, t: 0, byVoice: false, pending: null, lastSitu: null, voice: null, textMode: false };
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
   var TTS = window.speechSynthesis || null;
+  // Sons d'ambiance générés dans le navigateur (aucun fichier) : nappe douce pendant la réflexion, blips à l'écoute et à la réponse.
+  var SFX = { ctx: null, hum: null };
+  function sfxInit() { if (SFX.ctx) { if (SFX.ctx.state === "suspended") SFX.ctx.resume(); return; } var AC = window.AudioContext || window.webkitAudioContext; if (AC) { try { SFX.ctx = new AC(); } catch (e) {} } }
+  function sfxOn() { return SFX.ctx && S.vocalSons !== false; }
+  function sfxBlip(f1, f2, dur) {
+    if (!sfxOn()) return;
+    var c = SFX.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.type = "sine"; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+  }
+  function sfxHum(on) {
+    if (!SFX.ctx) return;
+    if (!on) { if (SFX.hum) { var h = SFX.hum, t0 = SFX.ctx.currentTime; h.g.gain.cancelScheduledValues(t0); h.g.gain.setValueAtTime(h.g.gain.value, t0); h.g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25); h.o1.stop(t0 + 0.3); h.o2.stop(t0 + 0.3); h.lfo.stop(t0 + 0.3); SFX.hum = null; } return; }
+    if (SFX.hum || !sfxOn()) return;
+    var c = SFX.ctx, t = c.currentTime, o1 = c.createOscillator(), o2 = c.createOscillator(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain(), f = c.createBiquadFilter();
+    o1.type = "sine"; o1.frequency.value = 196; o2.type = "triangle"; o2.frequency.value = 294;
+    f.type = "lowpass"; f.frequency.value = 900;
+    lfo.type = "sine"; lfo.frequency.value = 2.4; lg.gain.value = 0.012;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03, t + 0.4);
+    lfo.connect(lg); lg.connect(g.gain); o1.connect(f); o2.connect(f); f.connect(g); g.connect(c.destination);
+    o1.start(t); o2.start(t); lfo.start(t);
+    SFX.hum = { o1: o1, o2: o2, lfo: lfo, g: g };
+  }
   function jvSetState(st, hint) {
+    var prev = JV.state;
     JV.state = st; var el = $("jarvis"); el.className = "jv " + st;
+    if (st === "thinking") sfxHum(true); else if (prev === "thinking") { sfxHum(false); if (st === "speaking") sfxBlip(660, 440, 0.18); }
+    if (st === "listening" && prev !== "listening") sfxBlip(520, 880, 0.16);
     $("jv-state").lastElementChild.textContent = { idle: "prêt", listening: "je t'écoute", thinking: "je réfléchis", speaking: "je te réponds" }[st] || st;
     if (hint !== undefined) $("jv-hint").textContent = hint;
   }
   function jvOpen() {
-    if (!S.premium) { toast("Phénix en direct fait partie de l'offre Premium.", true); return; }
+    if (!S.premium) { toast(NOM + " fait partie de l'offre Premium.", true); return; }
     JV.open = true; $("jarvis").hidden = false; jvSetState("idle", SR ? "Appuie et parle" : "Ton navigateur n'a pas de reconnaissance vocale : écris ci-dessous");
     $("jv-mic").disabled = !SR; if (!SR) jvTextMode(true);
     $("jv-said").textContent = ""; $("jv-change").hidden = true; $("jv-action").hidden = true;
-    var last = (S.vocal.turns || []).slice(-1)[0];
-    var greet = last ? "Content de te retrouver" + (S.ctx.prenom ? ", " + cap(S.ctx.prenom) : "") + ". On reprend ? Dis-moi ce qui se passe." : "Salut" + (S.ctx.prenom ? " " + cap(S.ctx.prenom) : "") + ". Dis-moi ce qui se passe, je t'écoute.";
+    var greet = "Je t'écoute" + (S.ctx.prenom ? ", " + cap(S.ctx.prenom) : "") + ". Dis-moi.";
     $("jv-reply").textContent = greet;
+    sfxInit(); $("jv-sound").style.opacity = S.vocalSons === false ? ".4" : "1";
     jvStart(); jvSpeak(greet, function () { if (SR && !JV.textMode) jvListen(); });
   }
   function jvClose() {
-    JV.open = false; jvStopListen(); if (TTS) TTS.cancel(); JVA.seq++; if (JVA.el) { try { JVA.el.pause(); } catch (e) {} } jvStop();
+    JV.open = false; jvStopListen(); sfxHum(false); if (TTS) TTS.cancel(); JVA.seq++; if (JVA.el) { try { JVA.el.pause(); } catch (e) {} } jvStop();
     $("jarvis").hidden = true; renderHome();
   }
   function jvTextMode(on) {
@@ -2318,7 +2369,7 @@ var PERSO = (function () {
     if (d && typeof d === "object") {
       S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.email = d.email || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
       S.text = d.text || ""; S.form = d.form || { dettes: [], cats: {} }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
-      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {}; S.premium = !!d.premium; S.vocal = d.vocal && Array.isArray(d.vocal.turns) ? d.vocal : { turns: [] }; S.actionsPerso = Array.isArray(d.actionsPerso) ? d.actionsPerso : [];
+      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {}; S.premium = !!d.premium; S.vocal = d.vocal && Array.isArray(d.vocal.turns) ? d.vocal : { turns: [] }; S.actionsPerso = Array.isArray(d.actionsPerso) ? d.actionsPerso : []; S.vocalSons = d.vocalSons !== false;
       $("txt").value = S.text; fillForm(); renderDataSitu();
     }
     setMode(S.mode); setClient(); setGateMode("account");

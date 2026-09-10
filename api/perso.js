@@ -13,6 +13,7 @@
 //    PERSO_VOCAL_QUOTA    tours de conversation vocale par jour et par compte (défaut : 40)
 //    PERSO_VOCAL_POUR_TOUS "1" pour ouvrir l'assistant vocal à tous les comptes (sinon fiche client premium)
 //    PERSO_VOCAL_MODEL    modèle de la conversation (défaut : claude-haiku-4-5-20251001, rapide)
+//    PERSO_VOCAL_NOM      prénom de l'assistante vocale (défaut : Nova)
 //    ELEVENLABS_API_KEY ou OPENAI_API_KEY : voix naturelle (voir lib/voix.js) ; sinon voix du navigateur
 //
 //  Codes : "PXP-TAG-AAMM-SIGNATURE" (signés avec DAF_ACCESS_SECRET, espace de
@@ -37,6 +38,7 @@ const QUOTA = Math.max(1, parseInt(process.env.PERSO_DAILY_QUOTA || "5", 10) || 
 const VOCAL_QUOTA = Math.max(1, parseInt(process.env.PERSO_VOCAL_QUOTA || "40", 10) || 40);   // tours de conversation par jour
 const VOCAL_POUR_TOUS = process.env.PERSO_VOCAL_POUR_TOUS === "1";                            // ouvre l'assistant sans Premium (tests, lancement)
 const VOCAL_MODEL = process.env.PERSO_VOCAL_MODEL || "claude-haiku-4-5-20251001";              // conversation : un modèle rapide suffit
+const VOCAL_NOM = String(process.env.PERSO_VOCAL_NOM || "Nova").slice(0, 30);                    // prénom de l'assistante vocale
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
@@ -116,7 +118,7 @@ Remplis : score, progres (4 à 6 indicateurs avec avant, après, tendance et un 
 Laisse vides : fuites, opportunites, allocation, dettes, strategie_dettes, feuille_de_route, automatisations.`
 };
 
-const VOCAL_PROMPT = `Tu es en conversation orale avec la personne (assistant « Phénix en direct »). Elle te parle de sa situation, d'un problème, d'un changement ou d'une question d'argent du quotidien.
+const VOCAL_PROMPT = `Tu es en conversation orale avec la personne : tu t'appelles ` + VOCAL_NOM + `, l'assistante vocale de Phénix Perso (si on te demande ton nom, c'est ` + VOCAL_NOM + `). Elle te parle de sa situation, d'un problème, d'un changement ou d'une question d'argent du quotidien.
 Règles de l'oral : réponds en 2 à 4 phrases courtes, naturelles, à voix haute (pas de liste, pas de titre, pas de symbole, chiffres arrondis et dits simplement). Une seule question à la fois, seulement si elle est utile. Chaleureux, direct, jamais moralisateur. Le cadre légal ci-dessus s'applique mot pour mot : aucun placement, produit, crédit ou établissement recommandé.
 Mise à jour de la situation : si ce que dit la personne change durablement sa situation (revenus, logement, foyer, travail, dette soldée ou nouvelle, projet, objectif), réécris son paragraphe de situation en entier à la première personne, avec ses mots, en intégrant le changement (700 caractères au plus) dans "situation_maj", et résume le changement en une phrase dans "changement". Sinon laisse ces deux champs vides. Ne réécris pas pour une simple question ou une humeur passagère.
 Si un objectif prioritaire nouveau ressort clairement, mets-le dans "objectif" (parmi : Sortir du découvert, Constituer une épargne de sécurité, Rembourser mes dettes, Épargner pour un projet, Mieux vivre avec mon budget, Préparer l'avenir), sinon vide.
@@ -361,7 +363,7 @@ module.exports = async function handler(req, res) {
   if (core.rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
 
   try {
-    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist(), vocalPourTous: VOCAL_POUR_TOUS, voix: voix.label(), vocalModel: VOCAL_MODEL }); return; }
+    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist(), vocalPourTous: VOCAL_POUR_TOUS, voix: voix.label(), vocalModel: VOCAL_MODEL, nom: VOCAL_NOM }); return; }
     if (action === "login") { const r = await accounts.login(body, ip, checkCode); if (r.out.ok) { r.out.premium = isPremium(await store.getClient(r.out.code)); r.out.voix = !!voix.provider(); } send(res, r.status, r.out); return; }
     if (action === "password") { const r = await accounts.changePassword(body, ip); send(res, r.status, r.out); return; }
 

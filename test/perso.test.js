@@ -237,7 +237,7 @@ test("Phénix en direct : réservé au premium, conversation multi-tours, situat
   const msgs = lastRequest.messages;
   assert.equal(msgs.length, 5, "fond + accusé + 2 tours + message");
   assert.match(msgs[0].content[0].text, /Au chômage, 1 300/); assert.match(msgs[0].content[0].text, /\[fait\] Résilier la salle/);
-  assert.match(msgs[0].content[1].text, /conversation orale/);
+  assert.match(msgs[0].content[1].text, /conversation orale/); assert.match(msgs[0].content[1].text, /tu t'appelles Nova/);
   assert.equal(msgs[2].role, "user"); assert.equal(msgs[3].role, "assistant"); assert.equal(msgs[4].content, "Je viens de changer de travail, je gagne 2 400 maintenant.");
   assert.deepEqual(r.json.quota, { used: 1, limit: 40 });
   r = await call({ action: "vocal", code: code, turnId: "T1", message: "x" });

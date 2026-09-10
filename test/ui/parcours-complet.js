@@ -140,10 +140,11 @@
       var st = JSON.parse(localStorage.getItem("phenix.perso.v1")).ctx;
       ok(st.historique_situation.length === 1 && /Je vis seul à Lyon/.test(st.historique_situation[0].texte) && st.historique_situation[0].date, "persistance : historique de situation daté");
       // Phénix en direct (texte, pas de micro dans jsdom)
-      ok(!$("btn-live").hidden && /Parler à Phénix/.test($("card-live").textContent), "en direct : accès Premium visible");
-      $("btn-live-open").click();
+      ok(!$("btn-live").hidden && /Parler à Nova/.test($("btn-nova").textContent) && !$("btn-nova").classList.contains("locked"), "Nova : gros bouton actif dans l'espace");
+      $("btn-nova").click();
       await wait(function () { return !$("jarvis").hidden; });
-      ok(/Salut Sam/.test($("jv-reply").textContent), "en direct : accueil par le prénom");
+      ok(/^Je t'écoute, Sam\. Dis-moi\.$/.test($("jv-reply").textContent), "Nova : « Je t'écoute, dis-moi » à l'ouverture (" + $("jv-reply").textContent + ")");
+      ok(/Nova · Phénix/.test(document.querySelector(".jv-brand").textContent), "Nova : nommée dans l'écran");
       ok($("jv-mic").disabled && !$("jv-type").hidden, "en direct : sans reconnaissance vocale, le mode écrit s'ouvre seul");
       setVal("jv-input", "Je viens de changer de travail, 2 400 net"); click("jv-send");
       await wait(function () { return /Bravo pour le nouveau poste/.test($("jv-reply").textContent); });
@@ -162,6 +163,10 @@
       ok($("jv-change").hidden, "en direct : pas de mise à jour pour une simple humeur");
       ok(JSON.parse(localStorage.getItem("phenix.perso.v1")).vocal.turns.length === 4, "en direct : conversation gardée");
       click("jv-close"); await wait(function () { return $("jarvis").hidden && on("home"); });
+      ok($("fab-nova").hidden, "Nova : pas de bouton flottant sur l'espace (le gros bouton y est)");
+      $("nav") ; click("btn-home-hist"); await wait(function () { return on("hist"); });
+      ok(!$("fab-nova").hidden && /Nova/.test($("fab-nova").textContent), "Nova : bouton flottant sur les autres écrans");
+      click("btn-hist-back"); await wait(function () { return on("home"); });
       ok(/virement de 100/.test($("card-week").textContent), "espace : l'action proposée apparaît dans la semaine");
       // résiliation d'un abonnement
       document.querySelector('#subs button[data-sub]').click();
