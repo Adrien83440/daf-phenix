@@ -9,6 +9,7 @@
 //    DAF_EFFORT          profondeur de réflexion du modèle : low | medium | high (défaut : medium).
 //                        En « high », la réflexion consommait jusqu'à 20 000 jetons de sortie et
 //                        4 minutes par analyse : trop long pour l'outil, et trop cher.
+//    DAF_LECTURE_EFFORT  idem pour la lecture des données (défaut : low, c'est une extraction)
 //    DAF_DAILY_QUOTA     analyses par jour et par code (défaut : 10)
 //    DAF_ACCESS_CODES    codes fixes optionnels : "CODE:Libellé:2026-12-31,AUTRE:Libellé"
 //    DAF_REVOKED         tags de codes désactivés, séparés par des virgules : "DUPONT,MARTIN"
@@ -28,6 +29,10 @@ const accounts = require("../lib/accounts.js");
 
 const MODEL = process.env.DAF_MODEL || "claude-sonnet-5";
 const EFFORT = ["low", "medium", "high"].indexOf(process.env.DAF_EFFORT) > -1 ? process.env.DAF_EFFORT : "medium";
+// La lecture est une extraction : réflexion courte, sinon elle mange le budget de sortie sur un long relevé.
+const LECTURE_EFFORT = ["low", "medium", "high"].indexOf(process.env.DAF_LECTURE_EFFORT) > -1 ? process.env.DAF_LECTURE_EFFORT : "low";
+const LECTURE_MAX_TOKENS = 24000;
+const COMPACT_NOTE = "\n\nVersion compacte obligatoire : au plus 15 lignes notables (les plus utiles), 15 dépenses récurrentes, remarques de dix mots maximum, aucune phrase superflue.";
 const QUOTA = Math.max(1, parseInt(process.env.DAF_DAILY_QUOTA || "10", 10) || 10);
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
@@ -69,7 +74,7 @@ Attendu :
 - trésorerie en fin de période ; découvert autorisé si visible ;
 - dettes identifiables (prêts, PGE, découvert, leasing, Urssaf, fiscal, fournisseurs) avec mensualité, capital restant si visible, taux si visible ;
 - dépenses récurrentes détectées (même libellé à intervalles réguliers), avec le montant mensuel ;
-- jusqu'à 60 lignes notables : récurrentes, inhabituelles, doublons, montants élevés, frais bancaires, agios, rejets ;
+- jusqu'à 30 lignes notables, les plus utiles : inhabituelles, doublons, montants élevés, frais bancaires, agios, rejets (remarque courte) ;
 - alertes (découvert, rejets, retards, incohérences, mois anormaux) ;
 - ce qui manque pour être précis.
 
@@ -251,7 +256,7 @@ function rateLimited(ip) {
 // ---------------------------------------------------------------------------
 //  Appel Claude (sortie JSON structurée, prompt caching sur le préfixe)
 // ---------------------------------------------------------------------------
-async function callClaude(content, schema, maxTokens, system) {
+async function callClaude(content, schema, maxTokens, system, effort) {
   if (!API_KEY) throw new Error("ANTHROPIC_API_KEY manquante côté serveur.");
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, 285000);
@@ -265,7 +270,7 @@ async function callClaude(content, schema, maxTokens, system) {
         max_tokens: maxTokens,
         system: [{ type: "text", text: system || SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: content }],
-        output_config: { effort: EFFORT, format: { type: "json_schema", schema: schema } }
+        output_config: { effort: effort || EFFORT, format: { type: "json_schema", schema: schema } }
       }),
       signal: ctrl.signal
     });
@@ -275,7 +280,7 @@ async function callClaude(content, schema, maxTokens, system) {
   } finally { clearTimeout(timer); }
   if (!r.ok) throw new Error("IA : " + ((j && j.error && j.error.message) || ("erreur " + r.status)));
   if (j.stop_reason === "refusal") throw new Error("L'IA n'a pas pu traiter ces données. Vérifie qu'il s'agit bien de données financières.");
-  if (j.stop_reason === "max_tokens") throw new Error("Réponse trop longue. Réduis la période ou le nombre de lignes et relance.");
+  if (j.stop_reason === "max_tokens") { const e = new Error("Trop de lignes pour une seule lecture : colle une période plus courte (deux ou trois mois) et relance."); e.code = "max_tokens"; throw e; }
   const text = (j.content || []).filter(function (b) { return b.type === "text"; }).map(function (b) { return b.text; }).join("");
   let data;
   try { data = JSON.parse(text); } catch (e) { throw new Error("Réponse IA illisible, relance l'analyse."); }
@@ -312,8 +317,18 @@ async function lecture(body) {
   const text = String(body.text || "").slice(0, MAX_TEXT);
   const blocks = fileBlocks(body.files);
   if (!text.trim() && !blocks.length) throw new Error("Aucune donnée à lire : colle un relevé ou importe un fichier.");
-  const content = blocks.concat([{ type: "text", text: LECTURE_PROMPT + "\n\nContexte donné par le dirigeant :\n" + ctxText(body.context) + (blocks.length ? "\n\nLes fichiers joints (PDF ou images) font partie des données à lire." : "") + (text.trim() ? "\n\nDonnées brutes collées :\n<<<\n" + text + "\n>>>" : "") }]);
-  return callClaude(content, ETAT_SCHEMA, 16000);
+  const prompt = LECTURE_PROMPT + "\n\nContexte donné par le dirigeant :\n" + ctxText(body.context) + (blocks.length ? "\n\nLes fichiers joints (PDF ou images) font partie des données à lire." : "") + (text.trim() ? "\n\nDonnées brutes collées :\n<<<\n" + text + "\n>>>" : "");
+  return lectureRobuste(blocks, prompt, ETAT_SCHEMA, SYSTEM);
+}
+// Lecture en deux temps : si la sortie déborde malgré tout, on relance une fois en version compacte
+// (tant qu'il reste assez de temps avant la limite de la fonction).
+async function lectureRobuste(blocks, prompt, schema, system) {
+  const t0 = Date.now();
+  try { return await callClaude(blocks.concat([{ type: "text", text: prompt }]), schema, LECTURE_MAX_TOKENS, system, LECTURE_EFFORT); }
+  catch (e) {
+    if (e.code !== "max_tokens" || Date.now() - t0 > 120000) throw e;
+    return callClaude(blocks.concat([{ type: "text", text: prompt + COMPACT_NOTE }]), schema, LECTURE_MAX_TOKENS, system, "low");
+  }
 }
 
 async function analyse(body) {
@@ -404,4 +419,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { callClaude: callClaude, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, quotaLimit: quotaLimit, MODEL: MODEL, EFFORT: EFFORT, QUOTA: QUOTA, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
+module.exports._internal = { callClaude: callClaude, lectureRobuste: lectureRobuste, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, quotaLimit: quotaLimit, MODEL: MODEL, EFFORT: EFFORT, QUOTA: QUOTA, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };

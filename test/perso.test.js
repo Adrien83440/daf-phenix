@@ -129,6 +129,8 @@ test("lecture : persona perso, schéma état, contexte transmis", async function
   assert.equal(r.json.action, "lecture");
   assert.equal(lastRequest.system[0].text, P.SYSTEM, "la lecture perso doit utiliser le persona perso, pas celui du DAF Pro");
   assert.deepEqual(lastRequest.output_config.format.schema, P.ETAT_SCHEMA);
+  assert.equal(lastRequest.output_config.effort, "low", "la lecture réfléchit peu");
+  assert.equal(lastRequest.max_tokens, 24000);
   const txt = lastRequest.messages[0].content.map(function (b) { return b.text || ""; }).join("");
   assert.match(txt, /Prénom : Sam/);
   assert.match(txt, /En couple avec enfant/);
@@ -164,6 +166,27 @@ test("analyse : schéma du module, rapport complété, quota par runId", async f
   r = await call({ action: "analyse", code: code, runId: "R-A", module: "inconnu", etat: etat });
   assert.equal(r.status, 500);
   assert.match(r.json.error, /Module inconnu/);
+});
+
+test("lecture trop longue : relance automatique en version compacte", async function () {
+  const code = P.mintCode("Compact", 1).code;
+  let n = 0;
+  nextReply = function (req) {
+    n++;
+    if (n === 1) return { stop_reason: "max_tokens", content: [{ type: "text", text: "{" }] };
+    assert.match(req.messages[0].content[0].text, /Version compacte obligatoire/);
+    return { stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(vide(P.ETAT_SCHEMA)) }], usage: {} };
+  };
+  const r = await call({ action: "lecture", code: code, runId: "C1", text: "x".repeat(50) });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(n, 2, "deux appels : le second en compact");
+  n = 0; nextReply = function () { n++; return { stop_reason: "max_tokens", content: [{ type: "text", text: "{" }] }; };
+  const r2 = await call({ action: "lecture", code: code, runId: "C1", text: "x".repeat(50) });
+  assert.equal(r2.status, 500); assert.match(r2.json.error, /période plus courte/); assert.equal(n, 2);
+  // les analyses gardent l'effort standard
+  replyWith(vide(P.schemaRapport("audit")));
+  await call({ action: "analyse", code: code, runId: "C1", module: "audit", etat: {}, text: "" });
+  assert.equal(lastRequest.output_config.effort, "medium");
 });
 
 test("refus et réponse illisible de l'IA remontent en erreur lisible", async function () {

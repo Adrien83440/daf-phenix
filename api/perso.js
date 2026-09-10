@@ -65,7 +65,7 @@ Attendu :
 - épargne mensuelle (virements vers livrets ou comptes d'épargne) ; épargne disponible si un solde de livret est visible ; solde du compte en fin de période ; découvert autorisé si visible ;
 - dettes identifiables (crédit conso, crédit renouvelable, crédit auto, crédit immobilier, prêt étudiant, découvert utilisé, dette familiale, dette d'impôts, autre) avec mensualité, capital restant si visible, taux si visible ;
 - abonnements et prélèvements récurrents détectés (même libellé à intervalles réguliers) avec le montant mensuel ;
-- jusqu'à 60 lignes notables : récurrentes, inhabituelles, doublons, montants élevés, frais bancaires, agios, rejets, achats impulsifs répétés ;
+- jusqu'à 30 lignes notables, les plus utiles : inhabituelles, doublons, montants élevés, frais bancaires, agios, rejets, achats impulsifs répétés (remarque courte) ;
 - alertes (découvert, rejets, retards, mois anormaux, crédit renouvelable, dépendance à une seule source de revenus) ;
 - ce qui manque pour être précis.
 
@@ -256,8 +256,8 @@ async function lecture(body) {
   const text = String(body.text || "").slice(0, MAX_TEXT);
   const blocks = core.fileBlocks(body.files);
   if (!text.trim() && !blocks.length) throw new Error("Aucune donnée à lire : colle un relevé ou importe un fichier.");
-  const content = blocks.concat([{ type: "text", text: LECTURE_PROMPT + "\n\nContexte donné par la personne :\n" + ctxText(body.context) + (blocks.length ? "\n\nLes fichiers joints (PDF ou images) font partie des données à lire." : "") + (text.trim() ? "\n\nDonnées brutes collées :\n<<<\n" + text + "\n>>>" : "") }]);
-  return core.callClaude(content, ETAT_SCHEMA, 16000, SYSTEM);
+  const prompt = LECTURE_PROMPT + "\n\nContexte donné par la personne :\n" + ctxText(body.context) + (blocks.length ? "\n\nLes fichiers joints (PDF ou images) font partie des données à lire." : "") + (text.trim() ? "\n\nDonnées brutes collées :\n<<<\n" + text + "\n>>>" : "");
+  return core.lectureRobuste(blocks, prompt, ETAT_SCHEMA, SYSTEM);
 }
 
 async function analyse(body) {
