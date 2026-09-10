@@ -473,6 +473,17 @@ select.field option{color:#111;background:#fff}
 .wk{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 8px;font-size:13px;color:var(--ink2)}.wk b{font-weight:500;color:var(--ink)}.wk span{font-family:var(--serif);color:var(--gold2)}
 .wk.late b{color:var(--warn)}
 .tip{font-family:var(--serif);font-size:17px;line-height:1.45}
+.situ .situ-txt{min-height:170px;font-family:var(--serif);font-size:18px;line-height:1.5}
+.starters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.starters button{border:1px dashed var(--line2);background:transparent;color:var(--ink2);padding:6px 11px;border-radius:999px;cursor:pointer;font-size:13px}
+.starters button:hover{border-color:var(--gold);color:var(--ink)}
+.situ-foot{display:flex;justify-content:space-between;gap:10px;margin-top:6px}
+.situ-strip{display:flex;align-items:center;gap:12px;padding:12px 14px;margin:18px 0 4px}
+.situ-strip .ss-main{flex:1;min-width:0}.situ-strip b{font-weight:500;display:block}.situ-strip p{color:var(--ink2);font-size:13.5px;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.situ-card{font-family:var(--serif);font-size:17px;line-height:1.5;padding:14px 16px;border-radius:var(--r2);background:linear-gradient(160deg,rgba(220,168,78,.12),rgba(123,79,184,.1));border:1px solid rgba(220,168,78,.3)}
+.situ-card::before{content:"“";color:var(--gold2);font-size:26px;line-height:0;margin-right:4px}
+.situ-meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--ink3)}
+.situ-empty{padding:14px 16px;border-radius:var(--r2);border:1px dashed var(--line2);color:var(--ink2);font-size:14px;line-height:1.5}
 .disc{margin-top:22px;padding:12px 14px;border-radius:var(--r2);border:1px solid var(--line);font-size:12px;color:var(--ink3);line-height:1.5}
 @media (min-width:640px){
   .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -586,6 +597,27 @@ window.PERSO_CONFIG = {
     </div>
   </section>
 
+  <!-- Ma situation -->
+  <section class="screen" id="s-situ">
+    <div class="glass panel situ">
+      <h1 class="h-title" id="situ-title">Parle-moi de toi</h1>
+      <p class="h-sub" id="situ-sub">Quelques lignes, comme à un ami qui s'y connaît : qui tu es, ce que tu gagnes, ce qui te pèse, ce que tu veux. Phénix s'en sert pour chaque analyse, et tu pourras la mettre à jour quand ta vie bouge.</p>
+      <label class="lbl" for="situ-prenom">Ton prénom</label>
+      <input class="field" id="situ-prenom" placeholder="Sam" maxlength="40" autocomplete="given-name">
+      <label class="lbl" for="situ-txt">Ta situation, avec tes mots</label>
+      <div class="starters" id="situ-starters"></div>
+      <textarea class="field situ-txt" id="situ-txt" maxlength="700" placeholder="Je vis seule à Lyon, 2 100 € net par mois. Loyer 780 €. Un crédit auto qui se termine en mars. Je n'arrive pas à mettre de côté et je finis souvent le mois à découvert. Je voudrais un coussin de sécurité et partir en vacances l'été prochain sans stress."></textarea>
+      <div class="situ-foot"><span class="hint" id="situ-count" style="margin:0">0 / 700</span><span class="hint" id="situ-prev" style="margin:0"></span></div>
+      <label class="lbl">Ce qui compte le plus pour toi en ce moment</label>
+      <div class="chips" id="situ-obj"></div>
+      <div class="err" id="situ-err"></div>
+      <div class="row-btns" style="margin-top:18px">
+        <button class="btn ghost" id="btn-situ-skip" type="button">Plus tard</button>
+        <button class="btn primary" id="btn-situ-save" type="button"><svg><use href="#i-check"/></svg><span id="btn-situ-txt">C'est noté</span></button>
+      </div>
+    </div>
+  </section>
+
   <!-- Mon espace -->
   <section class="screen" id="s-home">
     <div class="glass panel home-hero">
@@ -662,18 +694,7 @@ Salle de sport 29,90
 Forfait mobile 19,99"></textarea>
       </div>
 
-      <h3 class="sub">Toi</h3>
-      <div class="grid2">
-        <div><label class="lbl" for="c-prenom">Prénom (pour te parler)</label><input class="field" id="c-prenom" placeholder="Sam" maxlength="40"></div>
-        <div><label class="lbl" for="c-age">Tranche d'âge</label><select class="field" id="c-age"></select></div>
-        <div><label class="lbl" for="c-sit">Foyer</label><select class="field" id="c-sit"></select></div>
-        <div><label class="lbl" for="c-log">Logement</label><select class="field" id="c-log"></select></div>
-      </div>
-      <label class="lbl" for="c-stat">Situation professionnelle</label><select class="field" id="c-stat"></select>
-      <label class="lbl">Ton objectif prioritaire</label>
-      <div class="chips" id="c-obj"></div>
-      <label class="lbl" for="c-prec">Ce que Phénix doit savoir (facultatif)</label>
-      <textarea class="field" id="c-prec" style="min-height:90px" placeholder="Un projet, un changement à venir, une dette qui t'inquiète, une dépense qui compte vraiment pour toi..."></textarea>
+      <div class="situ-strip soft" id="data-situ"><div class="ss-main"><b>Ta situation</b><p id="data-situ-txt"></p></div><button class="chip chip-btn" id="btn-data-situ" type="button">Mettre à jour</button></div>
 
       <div style="margin-top:20px"><button class="btn primary" id="btn-data" type="button"><svg><use href="#i-arrow"/></svg><span id="btn-data-txt">Lire mes données</span></button></div>
       <div class="err" id="data-err"></div>
@@ -1245,7 +1266,7 @@ var PERSO = (function () {
     code: "", label: "", expires: "", product: "", email: "", tmpPw: "", gateMode: "account", quota: { used: 0, limit: 5 }, consentAt: "",
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
     etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {}, checksAt: {},
-    goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home"
+    goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home", situReturn: "home"
   };
   var FIELDS = [
     ["revenus_mensuels", "Revenus nets / mois"], ["epargne_mensuelle", "Mis de côté / mois"], ["epargne_disponible", "Épargne disponible"],
@@ -1273,7 +1294,7 @@ var PERSO = (function () {
       var i = flow.indexOf(sp.dataset.step), c = flow.indexOf(cur);
       sp.className = i === c ? "on" : i < c ? "done" : "";
     });
-    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass";
+    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass" || (id === "situ" && !S.history.length && !S.ctx.situation_texte);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -1355,8 +1376,7 @@ var PERSO = (function () {
   function consent() {
     if (!$("agree-in").checked) return;
     S.consentAt = new Date().toISOString(); saveNow();
-    renderHome(); show("home");
-    toast("Bienvenue. Ton espace est prêt.");
+    openSitu("home", true);
   }
   function openPriv() {
     document.querySelectorAll(".priv-editeur").forEach(function (n) { n.textContent = EDITEUR; });
@@ -1421,8 +1441,10 @@ var PERSO = (function () {
     $("home-onb").hidden = !!run;
     var html = "";
     if (run) {
-      html += cardPlan(run) + cardProgress(run) + cardTip() + cardScore() + cardMois(run) + cardCoussin(run);
+      html += cardPlan(run) + cardProgress(run) + cardTip();
     }
+    html += cardSitu();
+    if (run) html += cardScore() + cardMois(run) + cardCoussin(run);
     html += cardGoals(run);
     if (run) {
       html += cardSubs(run) + cardDettes(run) + cardBudget() + cardEvolution();
@@ -1539,6 +1561,12 @@ var PERSO = (function () {
     ];
     return card("Tes progrès", '<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + k.map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("") + "</div>", { id: "card-progress", small: S.history.length + " bilan" + (S.history.length > 1 ? "s" : "") });
   }
+  function cardSitu() {
+    var t = S.ctx.situation_texte, h = S.ctx.historique_situation || [];
+    var inner = t ? '<div class="situ-card">' + esc(t) + '</div><div class="situ-meta"><span>Mise à jour le ' + esc(fmtDate(S.ctx.situation_date)) + "</span>" + (h.length ? "<span>" + h.length + " version" + (h.length > 1 ? "s" : "") + " précédente" + (h.length > 1 ? "s" : "") + " gardée" + (h.length > 1 ? "s" : "") + "</span>" : "") + '<button class="chip chip-btn" type="button" id="btn-situ-edit" style="margin-left:auto">Mettre à jour</button></div>'
+      : '<div class="situ-empty">Phénix ne sait encore rien de toi. Deux ou trois phrases sur ta vie, ton argent et ce que tu veux, et chaque analyse devient personnelle.</div><div class="btns" style="margin-top:10px"><button class="btn primary small" type="button" id="btn-situ-edit">Décrire ma situation</button></div>';
+    return card("Ma situation", inner, { wide: true, id: "card-situ", small: t ? "Phénix s'en sert à chaque bilan" : "" });
+  }
   function cardTip() {
     return card("Conseil de la semaine", '<p class="tip" id="tip-txt">' + esc(PERSO.tipOfWeek(S.tipOffset)) + '</p><div class="btns" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost small" type="button" id="tip-next">Un autre</button><button class="btn ghost small" type="button" id="btn-ics">Rappel mensuel dans mon agenda</button></div>', { id: "card-tip", small: "un nouveau chaque semaine" });
   }
@@ -1579,16 +1607,44 @@ var PERSO = (function () {
   function fillSelect(id, list, val) {
     var s = $(id); s.innerHTML = '<option value="">Choisir</option>' + list.map(function (x) { var v = Array.isArray(x) ? x[0] : x, l = Array.isArray(x) ? x[1] : x; return '<option value="' + esc(v) + '"' + (v === val ? " selected" : "") + ">" + esc(l) + "</option>"; }).join("");
   }
-  function renderObj() {
-    $("c-obj").innerHTML = PERSO.OBJECTIFS.map(function (o) { return '<button type="button" class="' + (S.ctx.objectif === o ? "on" : "") + '">' + esc(o) + "</button>"; }).join("");
+  var STARTERS = [["Je vis…", "Je vis "], ["Je gagne…", "Chaque mois je gagne "], ["Ce qui me pèse…", "Ce qui me pèse en ce moment, c'est "], ["Ce qui change…", "Ce qui va changer bientôt : "], ["Mon objectif…", "Mon objectif : "]];
+  function renderObj(id) {
+    $(id).innerHTML = PERSO.OBJECTIFS.map(function (o) { return '<button type="button" class="' + (S.ctx.objectif === o ? "on" : "") + '">' + esc(o) + "</button>"; }).join("");
   }
-  function collectCtx() {
-    S.ctx = { prenom: $("c-prenom").value.trim().slice(0, 40), age: $("c-age").value, situation: $("c-sit").value, logement: $("c-log").value, statut: $("c-stat").value, objectif: S.ctx.objectif || "", precisions: $("c-prec").value.trim() };
-    setClient(); save();
+  function openSitu(returnTo, first) {
+    S.situReturn = returnTo || "home";
+    var has = !!S.ctx.situation_texte;
+    $("situ-title").textContent = first && !has ? "Parle-moi de toi" : (has ? "Qu'est-ce qui a changé ?" : "Parle-moi de toi");
+    $("situ-sub").textContent = has ? "Modifie ce que tu veux : nouveau travail, déménagement, naissance, dette soldée, projet… Ta version précédente est gardée, pour que Phénix voie le chemin parcouru." : "Quelques lignes, comme à un ami qui s'y connaît : qui tu es, ce que tu gagnes, ce qui te pèse, ce que tu veux. Phénix s'en sert pour chaque analyse, et tu pourras la mettre à jour quand ta vie bouge.";
+    $("btn-situ-txt").textContent = has ? "Enregistrer la mise à jour" : "C'est noté";
+    $("btn-situ-skip").textContent = has ? "Annuler" : "Plus tard";
+    $("situ-prenom").value = S.ctx.prenom || ""; $("situ-txt").value = S.ctx.situation_texte || "";
+    $("situ-starters").innerHTML = STARTERS.map(function (st) { return '<button type="button" data-start="' + esc(st[1]) + '">' + esc(st[0]) + "</button>"; }).join("");
+    $("situ-prev").textContent = S.ctx.situation_date ? "Dernière version : " + fmtDate(S.ctx.situation_date) : "";
+    situCount(); renderObj("situ-obj"); $("situ-err").textContent = "";
+    show("situ");
   }
-  function fillCtx() {
-    $("c-prenom").value = S.ctx.prenom || ""; fillSelect("c-age", PERSO.AGES, S.ctx.age || ""); fillSelect("c-sit", PERSO.SITUATIONS, S.ctx.situation || "");
-    fillSelect("c-log", PERSO.LOGEMENTS, S.ctx.logement || ""); fillSelect("c-stat", PERSO.STATUTS, S.ctx.statut || ""); $("c-prec").value = S.ctx.precisions || ""; renderObj();
+  function situCount() { $("situ-count").textContent = $("situ-txt").value.length + " / 700"; }
+  function saveSitu() {
+    var txt = $("situ-txt").value.trim(), prenom = $("situ-prenom").value.trim().slice(0, 40);
+    if (txt.length < 20) { $("situ-err").textContent = "Écris au moins deux ou trois phrases : c'est ce qui rend l'analyse juste."; return; }
+    var changed = txt !== (S.ctx.situation_texte || "");
+    if (changed && S.ctx.situation_texte) {
+      S.ctx.historique_situation = [{ date: S.ctx.situation_date || new Date().toISOString(), texte: S.ctx.situation_texte }].concat(S.ctx.historique_situation || []).slice(0, 5);
+    }
+    if (changed || !S.ctx.situation_date) S.ctx.situation_date = new Date().toISOString();
+    S.ctx.situation_texte = txt; S.ctx.prenom = prenom;
+    setClient(); saveNow();
+    toast(changed && S.ctx.historique_situation && S.ctx.historique_situation.length ? "Situation mise à jour : Phénix en tiendra compte au prochain bilan." : "C'est noté. Phénix te connaît.");
+    leaveSitu();
+  }
+  function leaveSitu() { if (S.situReturn === "data") show("data"); else goHome(); }
+  function collectCtx() { setClient(); save(); }
+  function fillCtx() { renderDataSitu(); }
+  function renderDataSitu() {
+    var has = !!S.ctx.situation_texte;
+    $("data-situ-txt").textContent = has ? S.ctx.situation_texte + (S.ctx.situation_date ? " · mise à jour le " + fmtDate(S.ctx.situation_date) : "") : "Phénix ne sait encore rien de toi : deux ou trois phrases suffisent pour une analyse juste.";
+    $("btn-data-situ").textContent = has ? "Mettre à jour" : "Décrire ma situation";
   }
   function renderFormCats() {
     $("f-cats").innerHTML = PERSO.CATEGORIES.map(function (c) { return '<div><label class="lbl" for="f-cat-' + c[0] + '">' + esc(c[1]) + '</label><div class="suffix"><input class="field" id="f-cat-' + c[0] + '" data-cat="' + c[0] + '" inputmode="decimal" placeholder="' + esc(c[2]) + '"><i>€</i></div></div>'; }).join("");
@@ -1903,7 +1959,13 @@ var PERSO = (function () {
     $("btn-home").addEventListener("click", goHome);
     $("btn-data-home").addEventListener("click", goHome);
     $("btn-res-home").addEventListener("click", goHome);
-    $("btn-home-bilan").addEventListener("click", function () { show("data"); });
+    $("btn-home-bilan").addEventListener("click", function () { renderDataSitu(); show("data"); });
+    $("btn-data-situ").addEventListener("click", function () { openSitu("data"); });
+    $("btn-situ-save").addEventListener("click", saveSitu);
+    $("btn-situ-skip").addEventListener("click", leaveSitu);
+    $("situ-txt").addEventListener("input", situCount);
+    $("situ-starters").addEventListener("click", function (e) { var b = e.target.closest("button[data-start]"); if (!b) return; var t = $("situ-txt"); var cur = t.value.trim(); t.value = (cur ? cur + (/[.!?]$/.test(cur) ? " " : ". ") : "") + b.dataset.start; t.focus(); situCount(); });
+    $("situ-obj").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.ctx.objectif = S.ctx.objectif === b.textContent ? "" : b.textContent; renderObj("situ-obj"); save(); });
     $("btn-home-hist").addEventListener("click", function () { S.prevScreen = "home"; renderHist(); show("hist"); });
     $("btn-home-rgpd").addEventListener("click", function () { renderRgpd(); show("rgpd"); });
     $("btn-rgpd-back").addEventListener("click", goHome);
@@ -1911,6 +1973,7 @@ var PERSO = (function () {
     $("btn-erase").addEventListener("click", eraseAll);
     $("home-grid").addEventListener("click", function (e) {
       var add = e.target.closest("#g-add"); if (add) { addGoal(); return; }
+      if (e.target.id === "btn-situ-edit") { openSitu("home"); return; }
       var rm = e.target.closest(".goal .rm"); if (rm) { var id = rm.closest(".goal").dataset.id; S.goals = S.goals.filter(function (g) { return g.id !== id; }); saveNow(); renderHome(); return; }
       if (e.target.id === "tip-next") { S.tipOffset = (S.tipOffset || 0) + 1; $("tip-txt").textContent = PERSO.tipOfWeek(S.tipOffset); return; }
       if (e.target.id === "btn-ics") { icsReminder(); return; }
@@ -1942,9 +2005,6 @@ var PERSO = (function () {
     document.addEventListener("click", function (e) {
       var rm = e.target.closest(".drow2 .rm"); if (rm) { var row = rm.closest(".drow2"), par = row.parentNode; row.remove(); if (!par.children.length) par.innerHTML = '<p class="hint">Aucune dette pour l’instant.</p>'; if (par.id === "e-dettes") { syncEtatFromRead(); renderTot(); } }
     });
-    ["c-age", "c-sit", "c-log", "c-stat"].forEach(function (id) { $(id).addEventListener("change", collectCtx); });
-    ["c-prenom", "c-prec"].forEach(function (id) { $(id).addEventListener("input", debounce(collectCtx, 600)); });
-    $("c-obj").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.ctx.objectif = S.ctx.objectif === b.textContent ? "" : b.textContent; renderObj(); save(); });
     $("btn-data").addEventListener("click", onData);
     $("btn-read-back").addEventListener("click", function () { show("data"); });
     $("egrid").addEventListener("input", debounce(function () { syncEtatFromRead(); renderTot(); }, 300));
@@ -1975,14 +2035,14 @@ var PERSO = (function () {
 
   // --- démarrage -------------------------------------------------------------------
   function init() {
-    renderFormCats(); fillCtx(); renderDetteRows("f-dettes", []); renderMods();
+    renderFormCats(); renderDetteRows("f-dettes", []); renderMods();
     bind();
     var d = load();
     if (d && typeof d === "object") {
       S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.email = d.email || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
       S.text = d.text || ""; S.form = d.form || { dettes: [], cats: {} }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
       S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {};
-      $("txt").value = S.text; fillForm(); fillCtx();
+      $("txt").value = S.text; fillForm(); renderDataSitu();
     }
     setMode(S.mode); setClient(); setGateMode("account");
     if (S.code) {

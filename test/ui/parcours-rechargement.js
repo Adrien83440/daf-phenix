@@ -24,6 +24,7 @@
       ok(/Tes progrès/.test(grid) && /2 mois/.test(grid) && /d'affilée/.test(grid), "progrès : série de 2 mois consécutifs");
       ok(/Libéré/.test(grid) && /29,99 €/.test(grid), "progrès : montant libéré");
       ok(/\+8 depuis le premier bilan/.test(grid), "progrès : évolution du score");
+      ok($("card-situ").querySelector(".situ-empty") && /Décrire ma situation/.test($("card-situ").textContent), "situation : invitation quand rien n'est décrit");
       var tip = $("tip-txt").textContent; ok(tip.length > 30, "conseil de la semaine affiché");
       $("tip-next").click(); ok($("tip-txt").textContent !== tip && $("tip-txt").textContent.length > 30, "conseil : un autre");
       $("btn-ics").click(); ok(window.__exported === "bilan-phenix-perso.ics", "rappel mensuel : fichier agenda généré");

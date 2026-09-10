@@ -138,6 +138,14 @@ test("lecture : persona perso, schéma état, contexte transmis", async function
   assert.deepEqual(r.json.quota, { used: 1, limit: 2 });
 });
 
+test("la situation décrite par la personne et ses versions précédentes sont transmises", function () {
+  const t = P.ctxText({ prenom: "Sam", situation_texte: "Je viens de changer de boulot, 2 100 € net, seul en location.", situation_date: "2026-09-10T08:00:00Z", historique_situation: [{ date: "2026-08-02T08:00:00Z", texte: "En recherche d'emploi, chômage 1 300 €." }], precisions: "Le virement du 12 est un remboursement." });
+  assert.match(t, /Sa situation, décrite avec ses mots \(mise à jour le 2026-09-10\) : « Je viens de changer de boulot/);
+  assert.match(t, /Ce qu'elle disait avant/);
+  assert.match(t, /- le 2026-08-02 : « En recherche d'emploi/);
+  assert.match(t, /Précisions de la personne : Le virement/);
+});
+
 test("analyse : schéma du module, rapport complété, quota par runId", async function () {
   const code = P.mintCode("Analyse", 1).code;
   replyWith(Object.assign(vide(P.schemaRapport("dettes")), { titre: "Dettes", dettes: [{ nom: "Crédit conso", capital_restant: 4000, taux: 6.5, mensualite: 180, priorite: 1, action: "Rembourser en premier" }] }));

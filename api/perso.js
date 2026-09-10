@@ -258,6 +258,11 @@ function ctxText(ctx) {
   if (ctx.statut) lines.push("Situation professionnelle : " + ctx.statut);
   if (ctx.age) lines.push("Tranche d'âge : " + ctx.age);
   if (ctx.objectif) lines.push("Objectif prioritaire : " + ctx.objectif);
+  if (ctx.situation_texte) lines.push("Sa situation, décrite avec ses mots" + (ctx.situation_date ? " (mise à jour le " + String(ctx.situation_date).slice(0, 10) + ")" : "") + " : « " + String(ctx.situation_texte).slice(0, 1200) + " »");
+  if (Array.isArray(ctx.historique_situation) && ctx.historique_situation.length) {
+    lines.push("Ce qu'elle disait avant (pour voir l'évolution) :");
+    ctx.historique_situation.slice(0, 4).forEach(function (h) { if (h && h.texte) lines.push("- le " + String(h.date || "").slice(0, 10) + " : « " + String(h.texte).slice(0, 600) + " »"); });
+  }
   if (ctx.precisions) lines.push("Précisions de la personne : " + String(ctx.precisions).slice(0, 4000));
   return lines.length ? lines.join("\n") : "(aucun contexte fourni)";
 }

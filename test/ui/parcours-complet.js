@@ -51,7 +51,20 @@
       click("btn-priv-1"); ok($("modal-priv").classList.contains("on"), "politique de confidentialité ouverte");
       click("btn-modal-close"); ok(!$("modal-priv").classList.contains("on"), "politique fermée");
       click("btn-consent");
+      await wait(function () { return on("situ"); });
+      ok(/Parle-moi de toi/.test($("situ-title").textContent) && $("situ-starters").querySelectorAll("button").length === 5, "situation : écran d'accueil avec amorces");
+      setVal("situ-txt", "trop court"); click("btn-situ-save");
+      await wait(function () { return $("situ-err").textContent; });
+      ok(/deux ou trois phrases/.test($("situ-err").textContent), "situation : texte trop court refusé");
+      $("situ-starters").querySelector("button").click();
+      ok(/^trop court\. Je vis $/.test($("situ-txt").value), "situation : amorce insérée à la suite (" + JSON.stringify($("situ-txt").value) + ")");
+      setVal("situ-prenom", "sam"); setVal("situ-txt", "Je vis seul à Lyon, 2 180 € net. Loyer 780 €. Un crédit conso qui me pèse, et je finis souvent à découvert.");
+      ok(/\/ 700$/.test($("situ-count").textContent) && /^1\d\d \//.test($("situ-count").textContent), "situation : compteur (" + $("situ-count").textContent + ")");
+      $("situ-obj").querySelector("button").click(); ok($("situ-obj").querySelector("button.on"), "situation : objectif choisi");
+      click("btn-situ-save");
       await wait(function () { return on("home"); });
+      ok($("client-chip").textContent === "Sam" && /Bonjour Sam/.test($("home-title").textContent), "situation : prénom repris partout");
+      ok(/Je vis seul à Lyon/.test($("card-situ").textContent) && /Mise à jour le/.test($("card-situ").textContent), "espace : carte Ma situation");
       ok(!$("home-onb").hidden, "espace : onboarding visible sans bilan");
       ok($("home-grid").querySelector("#card-goals"), "espace : carte objectifs présente sans bilan");
       var saved = JSON.parse(localStorage.getItem("phenix.perso.v1"));
@@ -69,7 +82,7 @@
       await wait(function () { return on("data"); });
       ok(!$("steps").hidden, "étapes visibles dans le parcours bilan");
       stop("data");
-      setVal("c-prenom", "sam"); setVal("c-sit", "seul"); $("c-obj").querySelector("button").click();
+      ok(/Je vis seul à Lyon/.test($("data-situ-txt").textContent) && /Mettre à jour/.test($("btn-data-situ").textContent), "données : rappel de la situation avec bouton de mise à jour");
       click("btn-data");
       await wait(function () { return $("data-err").textContent; });
       ok(/quelques lignes/.test($("data-err").textContent), "données vides refusées");
@@ -116,6 +129,16 @@
       ok(/Dettes/.test(grid) && /Accélération douce/.test(grid), "espace : dettes et stratégie");
       ok(!/Évolution/.test(grid), "espace : pas d'évolution avec un seul bilan");
       stop("home");
+      // mise à jour de la situation depuis l'espace
+      $("btn-situ-edit").click(); await wait(function () { return on("situ"); });
+      ok(/Qu'est-ce qui a changé/.test($("situ-title").textContent) && /Je vis seul à Lyon/.test($("situ-txt").value) && /Annuler/.test($("btn-situ-skip").textContent), "situation : écran de mise à jour prérempli");
+      click("btn-situ-skip"); await wait(function () { return on("home"); });
+      $("btn-situ-edit").click(); await wait(function () { return on("situ"); });
+      setVal("situ-txt", "Nouveau boulot depuis septembre : 2 400 € net. Le crédit conso se termine en mars. Je veux enfin une épargne de sécurité."); click("btn-situ-save");
+      await wait(function () { return on("home") && /1 version précédente gardée/.test($("card-situ").textContent); });
+      ok(/Nouveau boulot/.test($("card-situ").textContent), "situation : mise à jour, version précédente gardée");
+      var st = JSON.parse(localStorage.getItem("phenix.perso.v1")).ctx;
+      ok(st.historique_situation.length === 1 && /Je vis seul à Lyon/.test(st.historique_situation[0].texte) && st.historique_situation[0].date, "persistance : historique de situation daté");
       // résiliation d'un abonnement
       document.querySelector('#subs button[data-sub]').click();
       await wait(function () { return /Libéré grâce à toi/.test($("home-grid").textContent); });
