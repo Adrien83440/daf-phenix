@@ -20,6 +20,8 @@ function rapport(mod) {
   return base;
 }
 function respond(body) {
+  if (body.action === "login") return String(body.email || "").toLowerCase() === "sam@exemple.fr" && body.password === "provisoire-1234" ? { ok: true, code: "PXP-TEST", label: "Sam", expires: "2026-12-31", product: "perso", email: "sam@exemple.fr", mustChange: true } : { ok: false, error: "E-mail ou mot de passe incorrect." };
+  if (body.action === "password") return body.current === "provisoire-1234" && String(body.password || "").length >= 8 ? { ok: true, email: body.email } : { ok: false, error: "Mot de passe actuel incorrect." };
   if (body.action === "verify") return String(body.code || "").toUpperCase() === "PXP-TEST" ? { ok: true, label: "TEST", expires: "2026-12-31", product: "perso", quota: { used: 1, limit: 5 } } : { ok: false, error: "Code inconnu. Vérifie les tirets et les majuscules." };
   if (body.action === "lecture") return { ok: true, action: "lecture", result: ETAT, quota: { used: 2, limit: 5 } };
   if (body.action === "analyse") return { ok: true, action: "analyse", module: body.module, result: rapport(body.module), quota: { used: 2, limit: 5 } };

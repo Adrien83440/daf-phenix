@@ -320,7 +320,8 @@ select.field option{color:#111;background:#fff}
 .toast.bad{border-color:rgba(255,122,122,.5)}
 .foot{text-align:center;color:var(--ink3);font-size:12px;margin-top:22px}
 .gate .h-title{font-size:32px}
-.gate .field{text-transform:uppercase;letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
+.gate #code{text-transform:uppercase;letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
+.gate .alt{text-align:center;margin-top:12px}
 .err{color:var(--bad);font-size:13.5px;margin-top:8px;min-height:20px}
 
 @media (min-width:640px){
@@ -525,11 +526,35 @@ window.PERSO_CONFIG = {
     <div class="glass panel">
       <h1 class="h-title">Ton directeur financier personnel, dopé à l'IA</h1>
       <p class="h-sub">Colle ton relevé de compte des deux ou trois derniers mois. Phénix Perso lit tout, chiffre tes fuites, réorganise ton budget, attaque tes dettes et te construit un plan sur 90 jours. Sans jugement, sans jargon, et sans jamais te vendre un placement.</p>
-      <label class="lbl" for="code">Code d'accès</label>
-      <input class="field" id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PXP-XXXX-XXXX-XXXXXXXX">
+      <div id="gate-account">
+        <label class="lbl" for="g-email">E-mail</label>
+        <input class="field" id="g-email" type="email" autocomplete="username" placeholder="toi@exemple.fr">
+        <label class="lbl" for="g-pw">Mot de passe</label>
+        <input class="field" id="g-pw" type="password" autocomplete="current-password">
+      </div>
+      <div id="gate-code" hidden>
+        <label class="lbl" for="code">Code d'accès</label>
+        <input class="field" id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PXP-XXXX-XXXX-XXXXXXXX">
+      </div>
       <div class="err" id="gate-err"></div>
       <button class="btn primary" id="btn-gate" type="button"><svg><use href="#i-lock"/></svg>Entrer dans mon espace</button>
-      <p class="hint" style="text-align:center;margin-top:12px">Ton code t'a été envoyé après ton abonnement. Il reste enregistré sur cet appareil.</p>
+      <p class="alt"><button type="button" class="chip chip-btn" id="btn-gate-mode">J'ai un code d'accès</button></p>
+      <p class="hint" style="text-align:center;margin-top:10px">Tes identifiants t'ont été envoyés après ton abonnement. L'accès reste enregistré sur cet appareil.</p>
+    </div>
+  </section>
+
+  <!-- Choix du mot de passe (première connexion) -->
+  <section class="screen gate" id="s-pass">
+    <div class="glass panel">
+      <h1 class="h-title">Choisis ton mot de passe</h1>
+      <p class="h-sub">Le mot de passe provisoire que tu viens d'utiliser ne servira plus. Choisis-en un que tu retiendras : 8 caractères minimum.</p>
+      <div id="p-current-wrap" hidden><label class="lbl" for="p-current">Mot de passe provisoire</label><input class="field" id="p-current" type="password" autocomplete="current-password"></div>
+      <label class="lbl" for="p-new">Nouveau mot de passe</label>
+      <input class="field" id="p-new" type="password" autocomplete="new-password">
+      <label class="lbl" for="p-confirm">Confirme-le</label>
+      <input class="field" id="p-confirm" type="password" autocomplete="new-password">
+      <div class="err" id="pass-err"></div>
+      <button class="btn primary" id="btn-pass" type="button"><svg><use href="#i-check"/></svg>Enregistrer et continuer</button>
     </div>
   </section>
 
@@ -1141,7 +1166,7 @@ var PERSO = (function () {
   var esc = PERSO.esc, toNum = PERSO.toNum, eur = PERSO.eur, pct = PERSO.pct;
 
   var S = {
-    code: "", label: "", expires: "", product: "", quota: { used: 0, limit: 5 }, consentAt: "",
+    code: "", label: "", expires: "", product: "", email: "", tmpPw: "", gateMode: "account", quota: { used: 0, limit: 5 }, consentAt: "",
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
     etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {},
     goals: [], cancelled: {}, coussin: 3, cancel: false, prevScreen: "home"
@@ -1172,13 +1197,13 @@ var PERSO = (function () {
       var i = flow.indexOf(sp.dataset.step), c = flow.indexOf(cur);
       sp.className = i === c ? "on" : i < c ? "done" : "";
     });
-    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent";
+    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   // --- persistance (appareil uniquement) --------------------------------------
   function persistable() {
-    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin };
+    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin };
   }
   var save = debounce(function () { saveNow(); }, 500);
   function saveNow() { try { localStorage.setItem(KEY, JSON.stringify(persistable())); } catch (e) { /* stockage plein : on continue */ } }
@@ -1202,18 +1227,53 @@ var PERSO = (function () {
     if (S.code) { chip.textContent = S.ctx.prenom ? cap(S.ctx.prenom) : (S.label || "Accès actif"); chip.hidden = false; }
     else chip.hidden = true;
   }
+  function setGateMode(m) {
+    S.gateMode = m;
+    $("gate-account").hidden = m !== "account"; $("gate-code").hidden = m !== "code";
+    $("btn-gate-mode").textContent = m === "account" ? "J'ai un code d'accès" : "Me connecter avec mon e-mail";
+  }
+  function afterGate() { setClient(); save(); if (S.consentAt) { renderHome(); show("home"); } else show("consent"); }
   function gate() {
-    var code = $("code").value.trim();
     $("gate-err").textContent = "";
-    if (!code) { $("gate-err").textContent = "Entre le code reçu après ton abonnement."; return; }
-    var b = $("btn-gate"); b.disabled = true;
-    S.code = code;
-    api({ action: "verify" }).then(function (j) {
+    var b = $("btn-gate");
+    if (S.gateMode === "code") {
+      var code = $("code").value.trim();
+      if (!code) { $("gate-err").textContent = "Entre le code reçu après ton abonnement."; return; }
+      b.disabled = true; S.code = code;
+      api({ action: "verify" }).then(function (j) {
+        b.disabled = false;
+        if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
+        S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota; S.email = "";
+        afterGate();
+      });
+      return;
+    }
+    var email = $("g-email").value.trim(), pw = $("g-pw").value;
+    if (!email || !pw) { $("gate-err").textContent = "Entre ton e-mail et ton mot de passe."; return; }
+    b.disabled = true;
+    api({ action: "login", email: email, password: pw }).then(function (j) {
       b.disabled = false;
-      if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
-      S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota;
-      setClient(); save();
-      if (S.consentAt) { renderHome(); show("home"); } else show("consent");
+      if (!j.ok) { $("gate-err").textContent = j.error || "Connexion refusée."; return; }
+      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.email = j.email || email;
+      $("g-pw").value = "";
+      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; renderMods(); } });
+      if (j.mustChange) { S.tmpPw = pw; $("p-current-wrap").hidden = true; show("pass"); return; }
+      afterGate();
+    });
+  }
+  function savePass() {
+    $("pass-err").textContent = "";
+    var p1 = $("p-new").value, p2 = $("p-confirm").value, cur = S.tmpPw || $("p-current").value;
+    if (p1.length < 8) { $("pass-err").textContent = "8 caractères minimum."; return; }
+    if (p1 !== p2) { $("pass-err").textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    if (!cur) { $("p-current-wrap").hidden = false; $("pass-err").textContent = "Entre ton mot de passe provisoire."; return; }
+    var b = $("btn-pass"); b.disabled = true;
+    api({ action: "password", email: S.email, current: cur, password: p1 }).then(function (j) {
+      b.disabled = false;
+      if (!j.ok) { $("pass-err").textContent = j.error || "Erreur."; if (/actuel/.test(j.error || "")) { S.tmpPw = ""; $("p-current-wrap").hidden = false; } return; }
+      S.tmpPw = ""; $("p-new").value = ""; $("p-confirm").value = "";
+      toast("Mot de passe enregistré.");
+      afterGate();
     });
   }
   function consent() {
@@ -1695,7 +1755,10 @@ var PERSO = (function () {
   function goHome() { renderHome(); show("home"); }
   function bind() {
     $("btn-gate").addEventListener("click", gate);
-    $("code").addEventListener("keydown", function (e) { if (e.key === "Enter") gate(); });
+    ["code", "g-email", "g-pw"].forEach(function (id) { $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") gate(); }); });
+    $("btn-gate-mode").addEventListener("click", function () { setGateMode(S.gateMode === "account" ? "code" : "account"); });
+    $("btn-pass").addEventListener("click", savePass);
+    ["p-new", "p-confirm"].forEach(function (id) { $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") savePass(); }); });
     $("agree").addEventListener("change", function () { $("agree").classList.toggle("on", $("agree-in").checked); $("btn-consent").disabled = !$("agree-in").checked; });
     $("btn-consent").addEventListener("click", consent);
     ["btn-priv-1", "btn-priv-2", "btn-priv-3"].forEach(function (id) { $(id).addEventListener("click", openPriv); });
@@ -1779,12 +1842,12 @@ var PERSO = (function () {
     bind();
     var d = load();
     if (d && typeof d === "object") {
-      S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
+      S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.email = d.email || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
       S.text = d.text || ""; S.form = d.form || { dettes: [], cats: {} }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
       S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3;
       $("txt").value = S.text; fillForm(); fillCtx();
     }
-    setMode(S.mode); setClient();
+    setMode(S.mode); setClient(); setGateMode("account");
     if (S.code) {
       if (S.consentAt) goHome(); else show("consent");
       api({ action: "verify" }).then(function (j) {

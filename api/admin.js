@@ -16,13 +16,15 @@
 //
 //  Actions (POST JSON) : login | me | password | admins | admin_set | admin_delete |
 //                        overview | clients | mint | import | update | extend |
-//                        revoke | unrevoke | delete | verify | events
+//                        revoke | unrevoke | delete | verify | events | reset_password
+//  mint avec access:"account" crée un compte e-mail + mot de passe provisoire (stockage KV requis).
 // ============================================================================
 "use strict";
 const pro = require("./daf.js");
 const perso = require("./perso.js");
 const store = require("../lib/store.js");
 const auth = require("../lib/auth.js");
+const accounts = require("../lib/accounts.js");
 const P = pro._internal, X = perso._internal;
 
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
@@ -56,6 +58,12 @@ function cost(s) {
   // s : { in, out, cache_read, cache_write } en jetons ; résultat en dollars
   return ((s.in || 0) * PRICE_IN + (s.out || 0) * PRICE_OUT + (s.cache_read || 0) * PRICE_IN * 0.1 + (s.cache_write || 0) * PRICE_IN * 1.25) / 1e6;
 }
+function publicRec(rec) {
+  if (!rec) return rec;
+  const o = Object.assign({}, rec); delete o.passwordHash;
+  o.account = !!rec.passwordHash;
+  return o;
+}
 function clean(body, allowed) {
   const out = {};
   allowed.forEach(function (k) { if (body[k] !== undefined && body[k] !== null) out[k] = String(body[k]).trim(); });
@@ -85,7 +93,7 @@ async function clientsMerged() {
   const used = await Promise.all(all.map(function (r) { return store.quotaUsed(r.code); }));
   return all.map(function (r, i) {
     const s = stats[r.code] || {};
-    return Object.assign({}, r, {
+    return Object.assign({}, publicRec(r), {
       status: r.unregistered ? (r.code === "ACADEMY" ? "academy" : "inconnu") : status(r, revokedSet, todayStr),
       revoked: revokedSet.has(r.code), usedToday: used[i], stats: s, cost: cost(s),
       limit: parseInt(r.quota, 10) > 0 ? parseInt(r.quota, 10) : (r.product === "perso" ? X.QUOTA : P.QUOTA)
@@ -115,7 +123,7 @@ async function overview() {
     config: {
       model: P.MODEL, effort: P.EFFORT, quotaPro: P.QUOTA, quotaPerso: X.QUOTA,
       configured: { api: !!process.env.ANTHROPIC_API_KEY, secret: !!process.env.DAF_ACCESS_SECRET, admin: !!ADMIN_KEY, bridge: !!process.env.DAF_BRIDGE_KEY, admins: Object.keys(auth.envAdmins()).length, sessionSecret: !!process.env.DAF_SESSION_SECRET },
-      store: await store.ping(), prices: { in: PRICE_IN, out: PRICE_OUT },
+      store: await store.ping(), prices: { in: PRICE_IN, out: PRICE_OUT }, accounts: accounts.canPersist(),
       revokedEnv: { pro: envList("DAF_REVOKED"), perso: envList("PERSO_REVOKED") },
       staticCodes: { pro: envList("DAF_ACCESS_CODES").map(function (s) { return s.split(":")[0]; }), perso: envList("PERSO_ACCESS_CODES").map(function (s) { return s.split(":")[0]; }) },
       region: process.env.VERCEL_REGION || "", env: process.env.VERCEL_ENV || "local"
@@ -191,8 +199,24 @@ module.exports = async function handler(req, res) {
       const product = body.product === "perso" ? "perso" : "pro";
       if (!process.env.DAF_ACCESS_SECRET) { send(res, 500, { ok: false, error: "DAF_ACCESS_SECRET manquant côté serveur." }); return; }
       const m = mint(product, body.name, body.months);
-      const rec = await store.saveClient(newRecord(product, m, body, "admin:" + who));
-      send(res, 200, { ok: true, client: rec, code: m.code, expires: m.expires, product: product });
+      let rec = await store.saveClient(newRecord(product, m, body, "admin:" + who));
+      let password = "";
+      if (body.access === "account") {
+        if (!accounts.validEmail(auth.normEmail(body.email))) { await store.deleteClient(rec.code); send(res, 400, { ok: false, error: "Un compte demande une adresse e-mail valide." }); return; }
+        password = accounts.provisionalPassword();
+        try { rec = await accounts.setPassword(rec.code, password, true); } catch (e) { await store.deleteClient(rec.code); send(res, 409, { ok: false, error: e.message }); return; }
+      }
+      send(res, 200, { ok: true, client: publicRec(rec), code: m.code, expires: m.expires, product: product, password: password });
+      return;
+    }
+
+    if (action === "reset_password") {
+      // Nouveau mot de passe provisoire (ou création du compte sur une fiche qui a un e-mail).
+      const rec = await store.getClient(body.code);
+      if (!rec) { send(res, 404, { ok: false, error: "Client inconnu." }); return; }
+      const password = accounts.provisionalPassword();
+      try { const next = await accounts.setPassword(rec.code, password, true); send(res, 200, { ok: true, client: publicRec(next), password: password }); }
+      catch (e) { send(res, 409, { ok: false, error: e.message }); }
       return;
     }
 
@@ -202,7 +226,8 @@ module.exports = async function handler(req, res) {
       if (!chk.ok) { send(res, 400, { ok: false, error: chk.error || "Code invalide." }); return; }
       const existing = await store.getClient(chk.code);
       const rec = await store.saveClient(Object.assign({ created: new Date().toISOString(), source: "import" }, existing || {}, { code: chk.code, product: chk.product, tag: chk.label, expires: chk.expires || "" }, clean(body, ["name", "email", "note"]), body.quota !== undefined ? { quota: parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0 } : {}));
-      send(res, 200, { ok: true, client: rec });
+      if (existing) await accounts.moveLogin(existing, rec);
+      send(res, 200, { ok: true, client: publicRec(rec) });
       return;
     }
 
@@ -210,8 +235,12 @@ module.exports = async function handler(req, res) {
       const rec = await store.getClient(body.code);
       if (!rec) { send(res, 404, { ok: false, error: "Client inconnu." }); return; }
       const upd = clean(body, ["name", "email", "note"]);
+      if (upd.email !== undefined) upd.email = auth.normEmail(upd.email);
       if (body.quota !== undefined) upd.quota = parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0;
-      send(res, 200, { ok: true, client: await store.saveClient(Object.assign({}, rec, upd)) });
+      if (rec.passwordHash && upd.email !== undefined && !accounts.validEmail(upd.email)) { send(res, 400, { ok: false, error: "Ce client a un compte : l'adresse e-mail doit rester valide." }); return; }
+      const next = await store.saveClient(Object.assign({}, rec, upd));
+      await accounts.moveLogin(rec, next);
+      send(res, 200, { ok: true, client: publicRec(next) });
       return;
     }
 
@@ -223,7 +252,8 @@ module.exports = async function handler(req, res) {
       const next = await store.saveClient(Object.assign({}, rec, { code: m.code, tag: m.label, expires: m.expires, months: parseInt(body.months, 10) || rec.months, created: new Date().toISOString(), source: "extend", replaces: rec.code, replacedBy: "" }));
       await store.saveClient(Object.assign({}, rec, { replacedBy: m.code }));
       await store.setRevoked(rec.code, true);
-      send(res, 200, { ok: true, client: next, code: m.code, expires: m.expires, product: rec.product });
+      await accounts.moveLogin(rec, next);   // le compte e-mail suit le nouveau code, mot de passe inchangé
+      send(res, 200, { ok: true, client: publicRec(next), code: m.code, expires: m.expires, product: rec.product });
       return;
     }
 
@@ -238,7 +268,9 @@ module.exports = async function handler(req, res) {
     if (action === "delete") {
       const code = String(body.code || "").trim().toUpperCase();
       if (!code) { send(res, 400, { ok: false, error: "Code manquant." }); return; }
+      const rec = await store.getClient(code);
       await store.setRevoked(code, true);
+      if (rec && rec.email && (await store.getLoginCode(auth.normEmail(rec.email))) === code) await store.deleteLogin(auth.normEmail(rec.email));
       await store.deleteClient(code);
       send(res, 200, { ok: true, code: code });
       return;
@@ -248,7 +280,7 @@ module.exports = async function handler(req, res) {
       const chk = checkAny(body.code);
       const rec = chk.ok ? await store.getClient(chk.code) : null;
       const revoked = chk.ok ? await store.isRevoked(chk.code) : false;
-      send(res, 200, Object.assign({ ok: true }, chk, { valid: !!chk.ok && !revoked, revoked: revoked, client: rec, usedToday: chk.ok ? await store.quotaUsed(chk.code) : 0 }));
+      send(res, 200, Object.assign({ ok: true }, chk, { valid: !!chk.ok && !revoked, revoked: revoked, client: publicRec(rec), usedToday: chk.ok ? await store.quotaUsed(chk.code) : 0 }));
       return;
     }
 

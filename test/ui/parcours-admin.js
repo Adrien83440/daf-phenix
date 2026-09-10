@@ -41,16 +41,22 @@
       ok(on("new"), "navigation : nouvel accès");
       setVal("n-product", "perso");
       ok($("n-months").value === "1", "nouvel accès : durée par défaut Perso = 1 mois");
+      ok($("n-access").value === "account" && !$("n-access").disabled, "nouvel accès : compte e-mail proposé par défaut");
       click("btn-mint"); await wait(function () { return $("n-err").textContent; });
       ok(/nom/.test($("n-err").textContent), "nouvel accès : nom obligatoire");
-      setVal("n-name", "Marie Dupont"); setVal("n-email", "marie@exemple.fr"); setVal("n-quota", "8"); setVal("n-note", "Essai");
+      setVal("n-name", "Marie Dupont"); click("btn-mint"); await wait(function () { return /e-mail/.test($("n-err").textContent); });
+      ok(true, "nouvel accès : e-mail obligatoire pour un compte");
+      setVal("n-email", "marie@exemple.fr"); setVal("n-quota", "8"); setVal("n-note", "Essai");
       click("btn-mint"); await wait(function () { return !$("n-result").hidden; });
-      var code = $("n-code").textContent;
-      ok(/^PXP-MARIEDUPON-\d{4}-[A-Z0-9]{8}$/.test(code), "nouvel accès : code Perso généré (" + code + ")");
-      ok(/\/perso/.test($("n-msg").value) && $("n-msg").value.indexOf(code) > -1 && /8 bilans/.test($("n-msg").value), "nouvel accès : message avec lien /perso, code et quota");
+      var code = $("n-code").textContent, pw = $("n-account-pw").textContent;
+      ok(/^PXP-MARIEDUPON-\d{4}-[A-Z0-9]{8}$/.test(code), "nouvel accès : code Perso généré en interne (" + code + ")");
+      ok(!$("n-account-box").hidden && $("n-code-box").hidden && /^[a-z]+-[a-z]+-\d{4}$/.test(pw), "nouvel accès : identifiants affichés, code masqué (" + pw + ")");
+      ok(/\/perso/.test($("n-msg").value) && $("n-msg").value.indexOf(pw) > -1 && $("n-msg").value.indexOf(code) < 0 && /8 bilans/.test($("n-msg").value), "nouvel accès : message avec lien, e-mail, mot de passe provisoire, sans code");
       ok(!$("n-mailto").hidden && /^mailto:marie@exemple.fr/.test($("n-mailto").href), "nouvel accès : lien e-mail");
 
-      // usage réel par la fonction Perso (comme si l'abonnée faisait un bilan)
+      // l'abonnée se connecte avec ses identifiants, puis fait un bilan
+      var lg = await api("/api/perso", { action: "login", email: "marie@exemple.fr", password: pw });
+      ok(lg.ok && lg.code === code && lg.mustChange, "fonction Perso : connexion avec le provisoire, code renvoyé, changement demandé");
       var v = await api("/api/perso", { action: "verify", code: code });
       ok(v.ok && v.quota.limit === 8, "fonction Perso : quota personnalisé appliqué");
       var l = await api("/api/perso", { action: "lecture", code: code, runId: "R1", text: "x".repeat(60) });
@@ -81,6 +87,12 @@
       await wait(function () { return $("clients-table").querySelector("tr.row"); });
       $("clients-table").querySelector("tr.row").click(); await wait(function () { return $("modal").classList.contains("on"); });
       ok($("m-note").value === "Cliente test", "fiche : modification enregistrée");
+      ok(/mot de passe provisoire, pas encore remplacé/.test($("modal-body").textContent) && $("m-reset-pw"), "fiche : compte affiché, réinitialisation possible");
+      click("m-reset-pw"); await wait(function () { return /[a-z]+-[a-z]+-\d{4}/.test($("m-reset-out").textContent); });
+      var pw2 = $("m-reset-out").querySelectorAll("b")[1].textContent;
+      ok(/^[a-z]+-[a-z]+-\d{4}$/.test(pw2) && pw2 !== pw, "fiche : nouveau mot de passe provisoire (" + pw2 + ")");
+      ok($("m-msg").value.indexOf(pw2) > -1, "fiche : message mis à jour avec le nouveau provisoire");
+      ok(!(await api("/api/perso", { action: "login", email: "marie@exemple.fr", password: pw })).ok && (await api("/api/perso", { action: "login", email: "marie@exemple.fr", password: pw2 })).ok, "fiche : ancien provisoire refusé, nouveau accepté");
       click("m-revoke");
       await wait(function () { return !$("modal").classList.contains("on"); });
       await wait(function () { return /Révoqué/.test($("clients-table").textContent); });
@@ -99,6 +111,8 @@
       var code2 = $("n-code").textContent;
       ok(/^PXP-MARIEDUPON-/.test(code2) && /remplace/.test($("n-meta").textContent), "prolongation : nouveau code affiché avec le message");
       ok(!(await api("/api/perso", { action: "verify", code: code })).ok && (await api("/api/perso", { action: "verify", code: code2 })).ok, "prolongation : ancien code refusé, nouveau accepté");
+      lg = await api("/api/perso", { action: "login", email: "marie@exemple.fr", password: pw2 });
+      ok(lg.ok && lg.code === code2, "prolongation : le compte suit le nouveau code, mot de passe inchangé");
       $("nav").querySelector('[data-v="clients"]').click();
       await wait(function () { return /Remplacé/.test($("clients-table").textContent); });
       ok($("clients-table").querySelectorAll("tr.row").length === 2, "clients : ancien et nouveau code listés");

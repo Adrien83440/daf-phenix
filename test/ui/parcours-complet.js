@@ -23,12 +23,28 @@
   (async function () {
     try {
       await wait(function () { return on("gate"); });
-      ok(true, "écran code affiché au premier lancement");
+      ok(true, "écran de connexion affiché au premier lancement");
+      ok(!$("gate-account").hidden && $("gate-code").hidden, "connexion : e-mail + mot de passe par défaut, code en option");
+      click("btn-gate-mode"); ok(!$("gate-code").hidden, "connexion : bascule vers le code");
       setVal("code", "PXP-FAUX"); click("btn-gate");
       await wait(function () { return $("gate-err").textContent.length > 5; });
       ok(/inconnu/i.test($("gate-err").textContent), "code refusé : " + $("gate-err").textContent);
-      setVal("code", "pxp-test"); click("btn-gate");
+      click("btn-gate-mode");
+      setVal("g-email", "sam@exemple.fr"); setVal("g-pw", "faux"); click("btn-gate");
+      await wait(function () { return /incorrect/.test($("gate-err").textContent); });
+      ok(true, "connexion : mot de passe refusé");
+      setVal("g-pw", "provisoire-1234"); click("btn-gate");
+      await wait(function () { return on("pass"); });
+      ok($("p-current-wrap").hidden && $("g-pw").value === "", "première connexion : écran du choix de mot de passe, provisoire retenu, champ vidé");
+      setVal("p-new", "abcdefgh"); setVal("p-confirm", "different"); click("btn-pass");
+      await wait(function () { return /identiques/.test($("pass-err").textContent); });
+      ok(true, "mot de passe : confirmation vérifiée");
+      setVal("p-new", "court"); setVal("p-confirm", "court"); click("btn-pass");
+      await wait(function () { return /8 caractères/.test($("pass-err").textContent); });
+      ok(true, "mot de passe : longueur minimale");
+      setVal("p-new", "mon-mdp-perso"); setVal("p-confirm", "mon-mdp-perso"); click("btn-pass");
       await wait(function () { return on("consent"); });
+      ok(true, "mot de passe enregistré, passage à la transparence");
       ok($("btn-consent").disabled, "consentement : bouton désactivé tant que la case n'est pas cochée");
       $("agree-in").checked = true; $("agree-in").dispatchEvent(new Event("change", { bubbles: true }));
       ok(!$("btn-consent").disabled, "consentement : bouton activé après la case");
@@ -39,7 +55,7 @@
       ok(!$("home-onb").hidden, "espace : onboarding visible sans bilan");
       ok($("home-grid").querySelector("#card-goals"), "espace : carte objectifs présente sans bilan");
       var saved = JSON.parse(localStorage.getItem("phenix.perso.v1"));
-      ok(saved && saved.consentAt && saved.code === "pxp-test", "persistance : code et consentement enregistrés");
+      ok(saved && saved.consentAt && saved.code === "PXP-TEST" && saved.email === "sam@exemple.fr", "persistance : code obtenu par la connexion, e-mail et consentement enregistrés");
       stop("home-empty");
 
       // objectif

@@ -16,6 +16,7 @@
 //  accepté ici : un client entreprise a l'espace perso en bonus.
 //
 //  Actions (POST JSON) : verify | lecture | analyse | mint (admin) | ping
+//                        login | password (comptes e-mail + mot de passe, voir lib/accounts.js)
 //
 //  RGPD : la fonction ne journalise ni ne conserve les données reçues ; elles
 //  transitent vers l'API Anthropic le temps du calcul (voir CONFORMITE-PERSO.md).
@@ -23,6 +24,7 @@
 "use strict";
 const core = require("./daf.js")._internal;
 const store = require("../lib/store.js");
+const accounts = require("../lib/accounts.js");
 
 const QUOTA = Math.max(1, parseInt(process.env.PERSO_DAILY_QUOTA || "5", 10) || 5);
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
@@ -298,7 +300,9 @@ module.exports = async function handler(req, res) {
   if (core.rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
 
   try {
-    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY) }); return; }
+    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist() }); return; }
+    if (action === "login") { const r = await accounts.login(body, ip, checkCode); send(res, r.status, r.out); return; }
+    if (action === "password") { const r = await accounts.changePassword(body, ip); send(res, r.status, r.out); return; }
 
     if (action === "mint") {
       if (!ADMIN_KEY || String(body.adminKey || "") !== ADMIN_KEY) { send(res, 401, { ok: false, error: "Clé admin incorrecte." }); return; }

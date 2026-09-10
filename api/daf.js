@@ -19,10 +19,12 @@
 //                        et activité conservés entre les redémarrages (voir lib/store.js et api/admin.js)
 //
 //  Actions (POST JSON) : verify | lecture | analyse | mint (admin) | ping
+//                        login | password (comptes e-mail + mot de passe, voir lib/accounts.js)
 // ============================================================================
 "use strict";
 const crypto = require("crypto");
 const store = require("../lib/store.js");
+const accounts = require("../lib/accounts.js");
 
 const MODEL = process.env.DAF_MODEL || "claude-sonnet-5";
 const EFFORT = ["low", "medium", "high"].indexOf(process.env.DAF_EFFORT) > -1 ? process.env.DAF_EFFORT : "medium";
@@ -351,10 +353,8 @@ module.exports = async function handler(req, res) {
 
   const action = String(body.action || "analyse");
   const bridged = !!BRIDGE_KEY && String(req.headers["x-daf-bridge"] || body.bridgeKey || "") === BRIDGE_KEY;
-  if (!bridged) {
-    const ip = String(req.headers["x-forwarded-for"] || req.socket && req.socket.remoteAddress || "?").split(",")[0].trim();
-    if (rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
-  }
+  const ip = String(req.headers["x-forwarded-for"] || req.socket && req.socket.remoteAddress || "?").split(",")[0].trim();
+  if (!bridged && rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
   try {
     if (bridged) {
       // Accès délégué à l'Academy : elle a déjà authentifié l'apprenant et compté son quota.
@@ -366,7 +366,9 @@ module.exports = async function handler(req, res) {
         return;
       }
     }
-    if (action === "ping") { send(res, 200, { ok: true, model: MODEL, quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY) }); return; }
+    if (action === "ping") { send(res, 200, { ok: true, model: MODEL, quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist() }); return; }
+    if (action === "login") { const r = await accounts.login(body, ip, function (c) { const k = checkCode(c); return k.ok ? Object.assign({ product: "pro" }, k) : k; }); send(res, r.status, r.out); return; }
+    if (action === "password") { const r = await accounts.changePassword(body, ip); send(res, r.status, r.out); return; }
 
     if (action === "mint") {
       if (!ADMIN_KEY || String(body.adminKey || "") !== ADMIN_KEY) { send(res, 401, { ok: false, error: "Clé admin incorrecte." }); return; }

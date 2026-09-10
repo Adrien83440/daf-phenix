@@ -239,10 +239,13 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
           <p class="h-sub">Génère un code, il est enregistré dans la liste des clients avec sa fiche.</p>
           <label class="lbl" for="n-product">Produit</label>
           <select class="field" id="n-product"><option value="pro">DAF Phénix — entreprises (PHX-…)</option><option value="perso">Phénix Perso — particuliers (PXP-…)</option></select>
+          <label class="lbl" for="n-access">Type d'accès</label>
+          <select class="field" id="n-access"><option value="account">Compte : e-mail + mot de passe provisoire</option><option value="code">Code d'accès seulement</option></select>
+          <p class="hint" id="n-access-hint"></p>
           <div class="grid g2" style="margin-top:12px">
             <div><label class="lbl" for="n-name">Nom (client, marque, prénom)</label><input class="field" id="n-name" placeholder="Le Comptoir" maxlength="80"></div>
             <div><label class="lbl" for="n-months">Durée</label><select class="field" id="n-months"><option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="24">24 mois</option></select></div>
-            <div><label class="lbl" for="n-email">E-mail (facultatif)</label><input class="field" id="n-email" type="email" placeholder="pour retrouver le client"></div>
+            <div><label class="lbl" for="n-email"><span id="n-email-lbl">E-mail</span></label><input class="field" id="n-email" type="email" placeholder="identifiant de connexion"></div>
             <div><label class="lbl" for="n-quota">Quota par jour (vide = défaut)</label><input class="field" id="n-quota" inputmode="numeric" placeholder="défaut"></div>
           </div>
           <label class="lbl" for="n-note">Note interne (facultatif)</label>
@@ -250,11 +253,12 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
           <div class="err" id="n-err"></div>
           <button class="btn primary wide" id="btn-mint" type="button">Générer le code</button>
           <div id="n-result" hidden>
-            <div class="code"><b id="n-code"></b><small id="n-meta"></small></div>
+            <div class="code" id="n-account-box" hidden><small>Identifiants à transmettre</small><b id="n-account-email" style="font-size:16px;letter-spacing:0"></b><b id="n-account-pw"></b><small>Mot de passe provisoire : la personne en choisira un autre à sa première connexion.</small></div>
+            <div class="code" id="n-code-box"><b id="n-code"></b><small id="n-meta"></small></div>
             <label class="lbl" for="n-msg">Message prêt à envoyer</label>
             <textarea class="field" id="n-msg" style="min-height:170px"></textarea>
             <div class="btns" style="margin-top:10px">
-              <button class="btn ghost small" type="button" data-copy="n-code">Copier le code</button>
+              <button class="btn ghost small" type="button" id="n-copy-ids">Copier les identifiants</button>
               <button class="btn ghost small" type="button" id="n-copy-link">Copier le lien</button>
               <button class="btn ghost small" type="button" data-copy="n-msg">Copier le message</button>
               <a class="btn ghost small" id="n-mailto" href="#" hidden>Ouvrir dans l'e-mail</a>
@@ -310,20 +314,8 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
         <p class="h-sub">Les adresses à donner aux clients, et celle-ci pour toi.</p>
         <div id="links-list"></div>
       </div>
-      <div class="grid g2">
-        <div class="glass panel">
-          <h3 style="font-size:18px;margin-bottom:4px">Message DAF Phénix (Pro)</h3>
-          <p class="h-sub">Variables : {nom}, {code}, {lien}, {expiration}, {quota}.</p>
-          <textarea class="field" id="tpl-pro" style="min-height:200px"></textarea>
-          <div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-tpl-save="pro">Enregistrer</button><button class="btn ghost small" type="button" data-tpl-reset="pro">Rétablir le texte par défaut</button></div>
-        </div>
-        <div class="glass panel">
-          <h3 style="font-size:18px;margin-bottom:4px">Message Phénix Perso</h3>
-          <p class="h-sub">Mêmes variables. Enregistré dans ce navigateur.</p>
-          <textarea class="field" id="tpl-perso" style="min-height:200px"></textarea>
-          <div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-tpl-save="perso">Enregistrer</button><button class="btn ghost small" type="button" data-tpl-reset="perso">Rétablir le texte par défaut</button></div>
-        </div>
-      </div>
+      <p class="hint" style="margin:0 4px 10px">Variables : {nom}, {email}, {motdepasse}, {code}, {lien}, {expiration}, {quota}. Les modèles sont gardés dans ce navigateur.</p>
+      <div class="grid g2" id="tpl-grid"></div>
     </section>
 
     <!-- Réglages -->
@@ -379,9 +371,12 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   var PRODUCT = { pro: "DAF Phénix", perso: "Phénix Perso" };
   var STATUS = { actif: "Actif", bientot: "Expire bientôt", expire: "Expiré", revoque: "Révoqué", remplace: "Remplacé", inconnu: "Non enregistré", academy: "Academy" };
   var TPL_DEFAULT = {
+    "pro-compte": "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : {lien}\nE-mail : {email}\nMot de passe provisoire : {motdepasse}\n\nÀ ta première connexion, tu choisiras ton propre mot de passe. Colle ensuite ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Jusqu'à {quota} analyses par jour. Accès valable jusqu'au {expiration}.",
+    "perso-compte": "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : {lien}\nE-mail : {email}\nMot de passe provisoire : {motdepasse}\n\nÀ ta première connexion, tu choisiras ton propre mot de passe. Colle ensuite ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Jusqu'à {quota} bilans par jour. Accès valable jusqu'au {expiration}.",
     pro: "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : {lien}\nCode d'accès : {code}\n\nColle ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Jusqu'à {quota} analyses par jour. Accès valable jusqu'au {expiration}.",
     perso: "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : {lien}\nCode d'accès : {code}\n\nColle ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Ton espace se met à jour à chaque bilan. Jusqu'à {quota} bilans par jour. Accès valable jusqu'au {expiration}."
   };
+  var TPL_LABEL = { "pro-compte": "DAF Phénix · compte (e-mail + mot de passe)", "perso-compte": "Phénix Perso · compte (e-mail + mot de passe)", pro: "DAF Phénix · code d'accès", perso: "Phénix Perso · code d'accès" };
   var $ = function (id) { return document.getElementById(id); };
   var S = { key: "", token: "", me: null, ov: null, clients: [], events: [], fp: "", fs: "", fq: "", ap: "", aerr: false, last: null, loginMode: "account" };
 
@@ -403,10 +398,18 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       .catch(function () { return { ok: false, error: "Serveur injoignable." }; });
   }
   function badge(kind, text) { return '<span class="badge ' + esc(kind) + '">' + esc(text) + "</span>"; }
-  function tpl(product) { try { return localStorage.getItem("daf.admin.tpl." + product) || TPL_DEFAULT[product]; } catch (e) { return TPL_DEFAULT[product]; } }
-  function message(c) {
+  function tpl(key) { try { return localStorage.getItem("daf.admin.tpl." + key) || TPL_DEFAULT[key]; } catch (e) { return TPL_DEFAULT[key]; } }
+  function message(c, password) {
     var limit = c.limit || (c.product === "perso" ? (S.ov ? S.ov.config.quotaPerso : 5) : (S.ov ? S.ov.config.quotaPro : 10));
-    return tpl(c.product).replace(/\{nom\}/g, c.name || c.tag || "").replace(/\{code\}/g, c.code).replace(/\{lien\}/g, LINKS[c.product]).replace(/\{expiration\}/g, fmtDate(c.expires)).replace(/\{quota\}/g, limit);
+    var key = c.product + (password || c.account ? "-compte" : "");
+    return tpl(key).replace(/\{nom\}/g, c.name || c.tag || "").replace(/\{email\}/g, c.email || "").replace(/\{motdepasse\}/g, password || "(inchangé)").replace(/\{code\}/g, c.code).replace(/\{lien\}/g, LINKS[c.product]).replace(/\{expiration\}/g, fmtDate(c.expires)).replace(/\{quota\}/g, limit);
+  }
+  function accountsOk() { return !!(S.ov && S.ov.config.accounts); }
+  function renderAccessMode() {
+    var acc = $("n-access").value === "account";
+    $("n-email-lbl").textContent = acc ? "E-mail (identifiant de connexion)" : "E-mail (facultatif)";
+    $("n-access-hint").textContent = accountsOk() ? (acc ? "La personne reçoit son e-mail et un mot de passe provisoire, et choisit son mot de passe à la première connexion. Le code reste utilisé en interne." : "La personne reçoit un code à saisir. Elle peut aussi recevoir un compte plus tard depuis sa fiche.") : "Les comptes e-mail demandent le stockage KV (Réglages → Stockage). En attendant, seuls les codes d'accès sont possibles.";
+    if (!accountsOk()) { $("n-access").value = "code"; $("n-access").disabled = true; } else $("n-access").disabled = false;
   }
   function show(v) {
     document.querySelectorAll("#app .view").forEach(function (s) { s.classList.toggle("on", s.id === "v-" + v); });
@@ -500,7 +503,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
   }
 
   // --- tableau de bord ---------------------------------------------------------
-  function renderAll() { renderHeader(); renderDash(); renderLinks(); renderSettings(); }
+  function renderAll() { renderHeader(); renderDash(); renderLinks(); renderSettings(); renderAccessMode(); }
   function renderHeader() {
     var c = S.ov.config;
     $("chip-env").className = "chip " + (c.env === "production" ? "ok" : "warn"); $("chip-env").lastElementChild.textContent = (c.env === "production" ? "Production" : c.env) + (c.region ? " · " + c.region : "");
@@ -579,7 +582,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     var head = "<tr><th>Client</th><th>Produit</th><th>Statut</th><th>Expire</th><th class=\"num\">Aujourd'hui</th><th class=\"num\">Analyses</th><th class=\"num\">Appels</th><th class=\"num\">Coût</th><th>Dernier usage</th><th></th></tr>";
     $("clients-table").innerHTML = list.length ? head + list.map(function (c) {
       var dl = daysLeft(c.expires), s = c.stats || {};
-      return '<tr class="row" data-code="' + esc(c.code) + '"><td><b style="font-weight:500">' + esc(c.name || c.tag || c.code) + '</b><span class="sub mono">' + esc(c.code) + "</span></td><td>" + badge(c.product, PRODUCT[c.product] || c.product) + "</td><td>" + badge(c.status, STATUS[c.status] || c.status) + "</td><td>" + (c.expires ? esc(fmtDate(c.expires)) + '<span class="sub">' + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + "</span>" : "—") +
+      return '<tr class="row" data-code="' + esc(c.code) + '"><td><b style="font-weight:500">' + esc(c.name || c.tag || c.code) + '</b><span class="sub mono">' + esc(c.code) + "</span></td><td>" + badge(c.product, PRODUCT[c.product] || c.product) + (c.account ? ' <span class="badge ok" title="compte e-mail">@</span>' : "") + "</td><td>" + badge(c.status, STATUS[c.status] || c.status) + "</td><td>" + (c.expires ? esc(fmtDate(c.expires)) + '<span class="sub">' + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + "</span>" : "—") +
         '</td><td class="num">' + c.usedToday + " / " + c.limit + '</td><td class="num">' + n(s.runs) + '</td><td class="num">' + n(s.calls) + (s.errors ? '<span class="sub">' + s.errors + " échec(s)</span>" : "") + '</td><td class="num">' + usd(c.cost) + "</td><td>" + esc(ago(s.last_seen)) + (s.last_action ? '<span class="sub">' + esc(s.last_action) + "</span>" : "") + '</td><td><button class="btn ghost small" type="button" data-copy-link="' + esc(c.code) + '">Lien + code</button></td></tr>';
     }).join("") : '<tr><td class="hint" style="padding:22px;text-align:center">Aucun client ne correspond.</td></tr>';
     $("clients-hint").textContent = S.ov.config.store.backend === "kv" ? "" : "Sans stockage KV, cette liste ne contient que les codes émis ou utilisés depuis le dernier redémarrage de la fonction.";
@@ -600,6 +603,8 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     if (reg) {
       html += '<div class="sec"><h3>Fiche</h3><div class="grid g2"><div><label class="lbl" for="m-name">Nom</label><input class="field" id="m-name" value="' + esc(c.name || "") + '"></div><div><label class="lbl" for="m-email">E-mail</label><input class="field" id="m-email" value="' + esc(c.email || "") + '"></div><div><label class="lbl" for="m-quota">Quota par jour (vide = défaut)</label><input class="field" id="m-quota" inputmode="numeric" value="' + esc(c.quota || "") + '"></div><div><label class="lbl" for="m-note">Note</label><input class="field" id="m-note" value="' + esc(c.note || "") + '"></div></div>' +
         '<div class="btns" style="margin-top:10px"><button class="btn primary small" type="button" id="m-save">Enregistrer la fiche</button></div></div>';
+      html += '<div class="sec"><h3>Compte de connexion</h3>' + (c.account ? '<p class="hint" style="margin:0 0 8px">' + esc(c.email) + (c.mustChange ? " · mot de passe provisoire, pas encore remplacé" : " · mot de passe choisi par la personne") + "</p>" : '<p class="hint" style="margin:0 0 8px">Pas de compte : la personne entre son code d\'accès.' + (c.email ? "" : " Renseigne un e-mail dans la fiche pour pouvoir en créer un.") + "</p>") +
+        '<div class="btns">' + (accountsOk() && c.email ? '<button class="btn ghost small" type="button" id="m-reset-pw">' + (c.account ? "Nouveau mot de passe provisoire" : "Créer le compte (mot de passe provisoire)") + "</button>" : (accountsOk() ? "" : '<span class="hint" style="margin:0">Stockage KV requis pour les comptes.</span>')) + '</div><div id="m-reset-out" style="margin-top:10px"></div></div>';
       html += '<div class="sec"><h3>Envoyer</h3><textarea class="field" id="m-msg" style="min-height:150px">' + esc(message(c)) + '</textarea><div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-copy-text="' + esc(c.code) + '">Copier le code</button><button class="btn ghost small" type="button" data-copy-text="' + esc(LINKS[c.product]) + '">Copier le lien</button><button class="btn ghost small" type="button" data-copy="m-msg">Copier le message</button>' + (c.email ? '<a class="btn ghost small" href="mailto:' + esc(c.email) + "?subject=" + encodeURIComponent("Ton accès " + PRODUCT[c.product]) + "&body=" + encodeURIComponent(message(c)) + '">Ouvrir dans l\'e-mail</a>' : "") + "</div></div>";
       html += '<div class="sec"><h3>Accès</h3><div class="btns"><select class="field" id="m-months" style="width:auto"><option value="1">+ 1 mois</option><option value="3">+ 3 mois</option><option value="6">+ 6 mois</option><option value="12"' + (c.product === "pro" ? " selected" : "") + '>+ 12 mois</option><option value="24">+ 24 mois</option></select><button class="btn ghost small" type="button" id="m-extend">Prolonger (nouveau code)</button>' +
         (c.status === "revoque" && c.revoked ? '<button class="btn ghost small" type="button" id="m-unrevoke">Réactiver</button>' : (c.status !== "remplace" ? '<button class="btn danger small" type="button" id="m-revoke">Révoquer</button>' : "")) +
@@ -617,17 +622,24 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     $("n-err").textContent = "";
     var name = $("n-name").value.trim(); if (!name) { $("n-err").textContent = "Entre un nom."; return; }
     var b = $("btn-mint"); b.disabled = true;
-    api({ action: "mint", product: $("n-product").value, name: name, months: $("n-months").value, email: $("n-email").value.trim(), note: $("n-note").value.trim(), quota: $("n-quota").value.trim() }).then(function (j) {
+    var acc = $("n-access").value === "account" && !$("n-access").disabled;
+    if (acc && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("n-email").value.trim())) { b.disabled = false; $("n-err").textContent = "Un compte demande une adresse e-mail valide."; return; }
+    api({ action: "mint", product: $("n-product").value, name: name, months: $("n-months").value, email: $("n-email").value.trim(), note: $("n-note").value.trim(), quota: $("n-quota").value.trim(), access: acc ? "account" : "code" }).then(function (j) {
       b.disabled = false;
       if (!j.ok) { $("n-err").textContent = j.error || "Erreur."; return; }
-      var c = j.client; c.limit = c.quota || (c.product === "perso" ? S.ov.config.quotaPerso : S.ov.config.quotaPro);
-      S.last = c;
-      $("n-code").textContent = c.code; $("n-meta").textContent = PRODUCT[c.product] + " · " + (c.name || c.tag) + " · valable jusqu'au " + fmtDate(c.expires);
-      $("n-msg").value = message(c);
-      var m = $("n-mailto"); m.hidden = !c.email; if (c.email) m.href = "mailto:" + c.email + "?subject=" + encodeURIComponent("Ton accès " + PRODUCT[c.product]) + "&body=" + encodeURIComponent(message(c));
-      $("n-result").hidden = false;
-      toast("Code généré et enregistré."); loadClients(); refreshQuiet();
+      showNew(j.client, j.password || "", "");
+      toast(j.password ? "Compte créé : transmets les identifiants." : "Code généré et enregistré."); loadClients(); refreshQuiet();
     });
+  }
+  function showNew(c, password, extraMeta) {
+    c.limit = c.quota || (c.product === "perso" ? S.ov.config.quotaPerso : S.ov.config.quotaPro);
+    S.last = c; S.lastPassword = password;
+    $("n-account-box").hidden = !password; $("n-code-box").hidden = !!password;
+    if (password) { $("n-account-email").textContent = c.email; $("n-account-pw").textContent = password; }
+    $("n-code").textContent = c.code; $("n-meta").textContent = PRODUCT[c.product] + " · " + (c.name || c.tag) + " · valable jusqu'au " + fmtDate(c.expires) + (extraMeta || "");
+    $("n-msg").value = message(c, password);
+    var m = $("n-mailto"); m.hidden = !c.email; if (c.email) m.href = "mailto:" + c.email + "?subject=" + encodeURIComponent("Ton accès " + PRODUCT[c.product]) + "&body=" + encodeURIComponent(message(c, password));
+    $("n-result").hidden = false;
   }
   function refreshQuiet() { api({ action: "overview" }).then(function (j) { if (j.ok) { S.ov = j; renderDash(); } }); }
   function importCode() {
@@ -672,7 +684,9 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     $("links-list").innerHTML = [["DAF Phénix (Pro)", LINKS.pro, "à donner aux dirigeants avec leur code PHX-…"], ["Phénix Perso", LINKS.perso, "à donner aux particuliers avec leur code PXP-…"], ["Console admin", LINKS.admin, "pour toi uniquement"]].map(function (l) {
       return '<div class="linkrow soft"><b>' + esc(l[0]) + "</b><span>" + esc(l[1]) + ' <em style="color:var(--ink3);font-style:normal">· ' + esc(l[2]) + '</em></span><button class="btn ghost small" type="button" data-copy-text="' + esc(l[1]) + '">Copier</button></div>';
     }).join("");
-    $("tpl-pro").value = tpl("pro"); $("tpl-perso").value = tpl("perso");
+    $("tpl-grid").innerHTML = ["pro-compte", "perso-compte", "pro", "perso"].map(function (k) {
+      return '<div class="glass panel"><h3 style="font-size:17px;margin-bottom:8px">' + esc(TPL_LABEL[k]) + '</h3><textarea class="field" id="tpl-' + k + '" style="min-height:190px">' + esc(tpl(k)) + '</textarea><div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-tpl-save="' + k + '">Enregistrer</button><button class="btn ghost small" type="button" data-tpl-reset="' + k + '">Rétablir le texte par défaut</button></div></div>';
+    }).join("");
   }
 
   // --- réglages ----------------------------------------------------------------
@@ -716,10 +730,11 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       var tr = e.target.closest("[data-tpl-reset]"); if (tr) { try { localStorage.removeItem("daf.admin.tpl." + tr.dataset.tplReset); } catch (x) {} $("tpl-" + tr.dataset.tplReset).value = TPL_DEFAULT[tr.dataset.tplReset]; toast("Texte par défaut rétabli."); return; }
       var c2 = S.last;
       if (e.target.id === "m-save" && c2) { api({ action: "update", code: c2.code, name: $("m-name").value, email: $("m-email").value, note: $("m-note").value, quota: $("m-quota").value }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Fiche enregistrée."); }); return; }
-      if (e.target.id === "m-extend" && c2) { api({ action: "extend", code: c2.code, months: $("m-months").value }).then(function (j) { if (!j.ok) return toast(j.error, true); closeModal(); refresh().then(function () { show("new"); var c = j.client; c.limit = c.quota || (c.product === "perso" ? S.ov.config.quotaPerso : S.ov.config.quotaPro); S.last = c; $("n-code").textContent = c.code; $("n-meta").textContent = PRODUCT[c.product] + " · " + (c.name || c.tag) + " · valable jusqu'au " + fmtDate(c.expires) + " · remplace " + c2.code; $("n-msg").value = message(c); $("n-mailto").hidden = !c.email; if (c.email) $("n-mailto").href = "mailto:" + c.email + "?body=" + encodeURIComponent(message(c)); $("n-result").hidden = false; toast("Nouveau code émis, l'ancien est révoqué."); }); }); return; }
+      if (e.target.id === "m-extend" && c2) { api({ action: "extend", code: c2.code, months: $("m-months").value }).then(function (j) { if (!j.ok) return toast(j.error, true); closeModal(); refresh().then(function () { show("new"); showNew(j.client, "", " · remplace " + c2.code); toast(j.client.account ? "Accès prolongé : la personne garde son e-mail et son mot de passe, rien à lui renvoyer." : "Nouveau code émis, l'ancien est révoqué."); }); }); return; }
       if (e.target.id === "m-revoke" && c2) { if (!window.confirm("Révoquer l'accès de " + (c2.name || c2.tag) + " ? L'outil refusera ce code immédiatement.")) return; api({ action: "revoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès révoqué."); }); return; }
       if (e.target.id === "m-unrevoke" && c2) { api({ action: "unrevoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès réactivé."); }); return; }
       if (e.target.id === "m-delete" && c2) { if (!window.confirm("Supprimer " + (c2.name || c2.tag) + " ? Le code est révoqué et la fiche retirée. Définitif.")) return; api({ action: "delete", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Client supprimé."); }); return; }
+      if (e.target.id === "m-reset-pw" && c2) { if (c2.account && !window.confirm("Remplacer le mot de passe de " + (c2.name || c2.email) + " par un nouveau provisoire ? L'ancien ne fonctionnera plus.")) return; api({ action: "reset_password", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); S.last = Object.assign({}, c2, j.client, { limit: c2.limit }); $("m-reset-out").innerHTML = '<div class="code"><small>Identifiants à transmettre</small><b style="font-size:16px;letter-spacing:0">' + esc(j.client.email) + "</b><b>" + esc(j.password) + "</b></div>"; $("m-msg").value = message(S.last, j.password); toast("Mot de passe provisoire généré : envoie le message."); loadClients(); }); return; }
       if (e.target.id === "m-import" && c2) { closeModal(); show("new"); $("i-code").value = c2.code; $("i-name").value = c2.name || ""; $("i-code").focus(); return; }
     });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
@@ -729,6 +744,8 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     $("btn-mint").addEventListener("click", mintNew);
     $("n-product").addEventListener("change", function () { $("n-months").value = $("n-product").value === "perso" ? "1" : "12"; });
     $("n-copy-link").addEventListener("click", function () { if (S.last) copy(LINKS[S.last.product], "Lien copié"); });
+    $("n-copy-ids").addEventListener("click", function () { if (!S.last) return; copy(S.lastPassword ? "Lien : " + LINKS[S.last.product] + "\nE-mail : " + S.last.email + "\nMot de passe provisoire : " + S.lastPassword : "Lien : " + LINKS[S.last.product] + "\nCode d'accès : " + S.last.code, "Identifiants copiés"); });
+    $("n-access").addEventListener("change", renderAccessMode);
     $("btn-import").addEventListener("click", importCode);
     $("btn-check").addEventListener("click", checkCode);
     $("c-code").addEventListener("keydown", function (e) { if (e.key === "Enter") checkCode(); });

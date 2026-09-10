@@ -320,7 +320,8 @@ select.field option{color:#111;background:#fff}
 .toast.bad{border-color:rgba(255,122,122,.5)}
 .foot{text-align:center;color:var(--ink3);font-size:12px;margin-top:22px}
 .gate .h-title{font-size:32px}
-.gate .field{text-transform:uppercase;letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
+.gate #code{text-transform:uppercase;letter-spacing:.06em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-align:center}
+.gate .alt{text-align:center;margin-top:12px}
 .err{color:var(--bad);font-size:13.5px;margin-top:8px;min-height:20px}
 
 @media (min-width:640px){
@@ -406,11 +407,35 @@ window.DAF_CONFIG = { endpoint: "/api/daf" };
     <div class="glass panel">
       <h1 class="h-title">Ton directeur financier, dopé à l'IA</h1>
       <p class="h-sub">Colle un relevé, un export compta ou ta caisse des 3 derniers mois. DAF Phénix lit tout, chiffre tes fuites, réorganise ta trésorerie, attaque tes dettes et te livre un plan sur 90 jours.</p>
-      <label class="lbl" for="code">Code d'accès</label>
-      <input class="field" id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PHX-XXXX-XXXX-XXXXXXXX">
+      <div id="gate-account">
+        <label class="lbl" for="g-email">E-mail</label>
+        <input class="field" id="g-email" type="email" autocomplete="username" placeholder="toi@entreprise.fr">
+        <label class="lbl" for="g-pw">Mot de passe</label>
+        <input class="field" id="g-pw" type="password" autocomplete="current-password">
+      </div>
+      <div id="gate-code" hidden>
+        <label class="lbl" for="code">Code d'accès</label>
+        <input class="field" id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="PHX-XXXX-XXXX-XXXXXXXX">
+      </div>
       <div class="err" id="gate-err"></div>
       <button class="btn primary" id="btn-gate" type="button"><svg><use href="#i-lock"/></svg>Débloquer mon accès</button>
-      <p class="hint" style="text-align:center;margin-top:12px">Ton code t'a été remis par l'équipe Phénix. Il reste enregistré sur cet appareil.</p>
+      <p class="alt"><button type="button" class="chip chip-btn" id="btn-gate-mode">J'ai un code d'accès</button></p>
+      <p class="hint" style="text-align:center;margin-top:10px">Tes identifiants t'ont été remis par l'équipe Phénix. L'accès reste enregistré sur cet appareil.</p>
+    </div>
+  </section>
+
+  <!-- Choix du mot de passe (première connexion) -->
+  <section class="screen gate" id="s-pass">
+    <div class="glass panel">
+      <h1 class="h-title">Choisis ton mot de passe</h1>
+      <p class="h-sub">Le mot de passe provisoire que tu viens d'utiliser ne servira plus. Choisis-en un que tu retiendras : 8 caractères minimum.</p>
+      <div id="p-current-wrap" hidden><label class="lbl" for="p-current">Mot de passe provisoire</label><input class="field" id="p-current" type="password" autocomplete="current-password"></div>
+      <label class="lbl" for="p-new">Nouveau mot de passe</label>
+      <input class="field" id="p-new" type="password" autocomplete="new-password">
+      <label class="lbl" for="p-confirm">Confirme-le</label>
+      <input class="field" id="p-confirm" type="password" autocomplete="new-password">
+      <div class="err" id="pass-err"></div>
+      <button class="btn primary" id="btn-pass" type="button"><svg><use href="#i-check"/></svg>Enregistrer et continuer</button>
     </div>
   </section>
 
@@ -908,7 +933,7 @@ var DAF = (function () {
   var esc = DAF.esc, toNum = DAF.toNum, eur = DAF.eur;
 
   var S = {
-    code: "", label: "", expires: "", quota: { used: 0, limit: 10 },
+    code: "", label: "", expires: "", email: "", tmpPw: "", gateMode: "account", quota: { used: 0, limit: 10 },
     mode: "paste", text: "", files: [], fileTexts: {}, form: { dettes: [] }, ctx: {},
     etat: null, sel: {}, run: null, view: null, history: [], checks: {}, cancel: false, prevScreen: "data"
   };
@@ -932,7 +957,7 @@ var DAF = (function () {
   }
   function show(id) {
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.toggle("on", s.id === "s-" + id); });
-    $("steps").hidden = (id === "gate" || id === "hist");
+    $("steps").hidden = (id === "gate" || id === "hist" || id === "pass");
     var steps = ["data", "read", "result"], cur = id === "run" ? "read" : id;
     document.querySelectorAll("#steps span").forEach(function (sp) {
       var i = steps.indexOf(sp.dataset.step), c = steps.indexOf(cur);
@@ -943,7 +968,7 @@ var DAF = (function () {
 
   // --- persistance (AcademyApp si présent, sinon localStorage) --------------
   function persistable() {
-    return { v: 1, code: S.code, label: S.label, expires: S.expires, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, history: S.history.slice(0, window.AcademyApp ? 3 : 8) };
+    return { v: 1, code: S.code, label: S.label, expires: S.expires, email: S.email, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, history: S.history.slice(0, window.AcademyApp ? 3 : 8) };
   }
   var save = debounce(function () {
     var d = persistable();
@@ -974,18 +999,52 @@ var DAF = (function () {
     if (S.code) { chip.textContent = S.label || "Accès actif"; chip.hidden = false; $("btn-hist").hidden = false; }
     else { chip.hidden = true; $("btn-hist").hidden = true; }
   }
+  function setGateMode(m) {
+    S.gateMode = m;
+    $("gate-account").hidden = m !== "account"; $("gate-code").hidden = m !== "code";
+    $("btn-gate-mode").textContent = m === "account" ? "J'ai un code d'accès" : "Me connecter avec mon e-mail";
+  }
+  function welcome() { setClient(); save(); show("data"); toast("Bienvenue" + (S.label ? ", " + S.label : "") + ". Ton DAF est prêt."); }
   function gate() {
-    var code = $("code").value.trim();
     $("gate-err").textContent = "";
-    if (!code) { $("gate-err").textContent = "Entre le code que l'équipe Phénix t'a remis."; return; }
-    var b = $("btn-gate"); b.disabled = true;
-    S.code = code;
-    api({ action: "verify" }).then(function (j) {
+    var b = $("btn-gate");
+    if (S.gateMode === "code") {
+      var code = $("code").value.trim();
+      if (!code) { $("gate-err").textContent = "Entre le code que l'équipe Phénix t'a remis."; return; }
+      b.disabled = true; S.code = code;
+      api({ action: "verify" }).then(function (j) {
+        b.disabled = false;
+        if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
+        S.label = j.label || ""; S.expires = j.expires || ""; S.quota = j.quota || S.quota; S.email = "";
+        welcome();
+      });
+      return;
+    }
+    var email = $("g-email").value.trim(), pw = $("g-pw").value;
+    if (!email || !pw) { $("gate-err").textContent = "Entre ton e-mail et ton mot de passe."; return; }
+    b.disabled = true;
+    api({ action: "login", email: email, password: pw }).then(function (j) {
       b.disabled = false;
-      if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
-      S.label = j.label || ""; S.expires = j.expires || ""; S.quota = j.quota || S.quota;
-      setClient(); save(); show("data");
-      toast("Bienvenue" + (S.label ? ", " + S.label : "") + ". Ton DAF est prêt.");
+      if (!j.ok) { $("gate-err").textContent = j.error || "Connexion refusée."; return; }
+      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.email = j.email || email;
+      $("g-pw").value = "";
+      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; renderMods(); } });
+      if (j.mustChange) { S.tmpPw = pw; $("p-current-wrap").hidden = true; show("pass"); return; }
+      welcome();
+    });
+  }
+  function savePass() {
+    $("pass-err").textContent = "";
+    var p1 = $("p-new").value, p2 = $("p-confirm").value, cur = S.tmpPw || $("p-current").value;
+    if (p1.length < 8) { $("pass-err").textContent = "8 caractères minimum."; return; }
+    if (p1 !== p2) { $("pass-err").textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    if (!cur) { $("p-current-wrap").hidden = false; $("pass-err").textContent = "Entre ton mot de passe provisoire."; return; }
+    var b = $("btn-pass"); b.disabled = true;
+    api({ action: "password", email: S.email, current: cur, password: p1 }).then(function (j) {
+      b.disabled = false;
+      if (!j.ok) { $("pass-err").textContent = j.error || "Erreur."; if (/actuel/.test(j.error || "")) { S.tmpPw = ""; $("p-current-wrap").hidden = false; } return; }
+      S.tmpPw = ""; $("p-new").value = ""; $("p-confirm").value = "";
+      welcome();
     });
   }
 
@@ -1266,7 +1325,10 @@ var DAF = (function () {
   // --- événements ---------------------------------------------------------------
   function bind() {
     $("btn-gate").addEventListener("click", gate);
-    $("code").addEventListener("keydown", function (e) { if (e.key === "Enter") gate(); });
+    ["code", "g-email", "g-pw"].forEach(function (id) { $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") gate(); }); });
+    $("btn-gate-mode").addEventListener("click", function () { setGateMode(S.gateMode === "account" ? "code" : "account"); });
+    $("btn-pass").addEventListener("click", savePass);
+    ["p-new", "p-confirm"].forEach(function (id) { $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") savePass(); }); });
     document.querySelectorAll("#seg button").forEach(function (b) { b.addEventListener("click", function () { setMode(b.dataset.mode); }); });
     $("txt").addEventListener("input", debounce(function () { S.text = $("txt").value; save(); }, 800));
     var drop = $("drop");
@@ -1322,14 +1384,14 @@ var DAF = (function () {
     bind();
     load(function (d) {
       if (d && typeof d === "object") {
-        S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.mode = d.mode || "paste";
+        S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.email = d.email || ""; S.mode = d.mode || "paste";
         S.text = d.text || ""; S.form = d.form || { dettes: [] }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
         $("txt").value = S.text; fillForm();
         $("c-ent").value = S.ctx.entreprise || ""; fillSelect("c-sect", DAF.SECTEURS, S.ctx.secteur || ""); fillSelect("c-stat", DAF.STATUTS, S.ctx.statut || "");
         $("c-sect-autre").value = S.ctx.secteur_autre || ""; $("c-sect-autre-wrap").hidden = S.ctx.secteur !== "Autre";
         $("c-eff").value = S.ctx.effectif || ""; $("c-prec").value = S.ctx.precisions || ""; renderObj();
       }
-      setMode(S.mode); setClient();
+      setMode(S.mode); setClient(); setGateMode("account");
       if (S.code) {
         show("data");
         api({ action: "verify" }).then(function (j) {
