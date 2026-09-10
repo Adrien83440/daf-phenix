@@ -514,7 +514,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     var o = S.ov, t = o.totals, c = o.config, st = c.store || {};
     $("dash-date").textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     var w = [];
-    if (st.backend !== "kv") w.push("<b>Aucun stockage persistant.</b> Les clients, quotas et l'activité vivent dans la mémoire de la fonction : ils repartent de zéro à chaque redémarrage (souvent plusieurs fois par jour). Pour une console fiable, branche Vercel KV ou Upstash : voir Réglages.");
+    if (st.backend !== "kv") w.push("<b>Aucun stockage persistant.</b> Les clients, quotas et l'activité vivent dans la mémoire de la fonction : ils repartent de zéro à chaque redémarrage (souvent plusieurs fois par jour). Pour une console fiable, branche une base Upstash Redis : voir Réglages.");
     if (st.backend === "kv" && !st.ok) w.push("<b>Le stockage KV ne répond pas</b> (" + esc(st.error || "") + "). Les outils continuent de fonctionner en mémoire, mais la console ne voit rien de neuf.");
     if (!c.configured.api || !c.configured.secret) w.push("<b>Configuration incomplète :</b> " + (!c.configured.api ? "ANTHROPIC_API_KEY manquante. " : "") + (!c.configured.secret ? "DAF_ACCESS_SECRET manquant. " : ""));
     $("dash-warn").hidden = !w.length; $("dash-warn").innerHTML = w.join("<br>");
@@ -696,7 +696,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       .map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v" style="font-size:19px">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("");
     var rows = [
       ["ANTHROPIC_API_KEY", c.configured.api, "clé API Anthropic"], ["DAF_ACCESS_SECRET", c.configured.secret, "signe tous les codes : ne jamais le changer"], ["DAF_ADMIN_KEY", c.configured.admin, "clé de secours de la console et appels serveur (Make)"], ["DAF_ADMINS", !!c.configured.admins, "comptes e-mail + mot de passe (npm run admin:hash)"], ["DAF_SESSION_SECRET", !!c.configured.sessionSecret, "signe les sessions (facultatif, sinon DAF_ACCESS_SECRET)"], ["DAF_BRIDGE_KEY", c.configured.bridge, "pont Academy (facultatif)"],
-      ["KV_REST_API_URL / KV_REST_API_TOKEN", st.backend === "kv", "Vercel KV ou Upstash (facultatif, recommandé)"],
+      ["KV_REST_API_URL / KV_REST_API_TOKEN", st.backend === "kv", "Upstash Redis via le marketplace Vercel (facultatif, recommandé), préfixe indifférent"],
       ["DAF_REVOKED", c.revokedEnv.pro.length ? c.revokedEnv.pro.join(", ") : "", "identifiants Pro révoqués par variable"], ["PERSO_REVOKED", c.revokedEnv.perso.length ? c.revokedEnv.perso.join(", ") : "", "identifiants Perso révoqués par variable"],
       ["DAF_ACCESS_CODES", c.staticCodes.pro.length ? c.staticCodes.pro.join(", ") : "", "codes fixes Pro"], ["PERSO_ACCESS_CODES", c.staticCodes.perso.length ? c.staticCodes.perso.join(", ") : "", "codes fixes Perso"]
     ];
@@ -704,8 +704,8 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       var v = r[1], cell = typeof v === "boolean" ? (v ? badge("ok", "définie") : badge("ko", "absente")) : (v ? '<span class="mono">' + esc(v) + "</span>" : '<span class="hint" style="margin:0">vide</span>');
       return '<tr><td class="mono">' + esc(r[0]) + "</td><td>" + cell + "</td><td>" + esc(r[2]) + "</td></tr>";
     }).join("");
-    $("settings-store").innerHTML = "<h3>Stockage persistant</h3>" + (st.backend === "kv" ? '<p class="hint">Vercel KV est branché : clients, révocations, quotas et activité survivent aux redémarrages et sont partagés entre les instances.</p>' :
-      '<p class="hint">Pour conserver clients, quotas et activité : sur Vercel, Storage → Create Database → KV (Upstash), rattache-la au projet. Les variables KV_REST_API_URL et KV_REST_API_TOKEN sont posées automatiquement ; redéploie. Rien d\'autre à installer. Sans cela, les révocations faites ici ne tiennent que jusqu\'au prochain redémarrage : utilise alors DAF_REVOKED / PERSO_REVOKED.</p>');
+    $("settings-store").innerHTML = "<h3>Stockage persistant</h3>" + (st.backend === "kv" ? '<p class="hint">La base Upstash est branchée : clients, comptes, révocations, quotas et activité survivent aux redémarrages et sont partagés entre les instances.</p>' :
+      '<p class="hint">Pour conserver clients, comptes, quotas et activité : sur Vercel, Storage → Upstash → Redis (offre gratuite, région Europe), rattache la base au projet, puis redéploie. Les variables sont posées automatiquement, quel que soit le préfixe choisi ; aucun SDK à installer. Sans cela, les révocations faites ici ne tiennent que jusqu\'au prochain redémarrage : utilise alors DAF_REVOKED / PERSO_REVOKED.</p>');
   }
 
   // --- événements --------------------------------------------------------------

@@ -1,7 +1,8 @@
 // lib/store.js sur le moteur KV : l'API REST Upstash est simulée par un mini Redis en mémoire.
 "use strict";
-process.env.KV_REST_API_URL = "https://kv.test.local";
-process.env.KV_REST_API_TOKEN = "jeton";
+// Variables préfixées comme le fait le marketplace Vercel (dafphenix_KV_REST_API_URL)
+process.env.dafphenix_KV_REST_API_URL = "https://kv.test.local";
+process.env.dafphenix_KV_REST_API_TOKEN = "jeton";
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
