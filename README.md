@@ -1,14 +1,23 @@
 # DAF Phénix
 
-Ton directeur financier dopé à l'IA, pour dirigeants de TPE/PME. Produit autonome : un site statique (Liquid Glass) + une fonction Vercel qui parle à Claude Sonnet 5. Aucune base de données, aucune dépendance npm.
+Ton directeur financier dopé à l'IA. Deux produits sur le même moteur, dans le même déploiement :
+
+- **DAF Phénix** (`/`) pour les dirigeants de TPE/PME ;
+- **Phénix Perso** (`/perso`) pour les particuliers, avec un espace personnel (voir [la section dédiée](#phénix-perso-particuliers)).
+
+Site statique (Liquid Glass) + fonctions Vercel qui parlent à Claude Sonnet 5. Aucune base de données, aucune dépendance npm.
 
 ```
 daf-phenix/
-├── index.html      l'outil (accès par code, données, lecture IA, 5 analyses, résultats, PDF, historique)
-├── admin.html      ta page pour débloquer un client (génère un code d'accès)
-├── api/daf.js      la fonction serveur : codes, quotas, prompts, appel IA
-├── vercel.json     durée max 300 s, URLs propres (/admin)
+├── index.html      l'outil Pro (accès par code, données, lecture IA, 5 analyses, résultats, PDF, historique)
+├── perso.html      l'outil Perso (accès par code, consentement, espace perso, bilan, 5 analyses, mes données)
+├── admin.html      ta page pour débloquer un client Pro ou un abonné Perso (génère un code d'accès)
+├── api/daf.js      fonction serveur Pro : codes PHX, quotas, prompts, appel IA (partagé)
+├── api/perso.js    fonction serveur Perso : codes PXP, quotas, prompts particuliers, cadre légal
+├── test/           tests de la fonction Perso (node --test) et tests d'interface (jsdom)
+├── vercel.json     durée max 300 s, région Paris, URLs propres (/admin, /perso)
 ├── package.json    minimal
+├── CONFORMITE-PERSO.md   RGPD et cadre réglementaire du produit particuliers
 └── README.md
 ```
 
@@ -61,6 +70,32 @@ Sonnet 5 : 2 $ par million de tokens en entrée, 10 $ en sortie. Un audit comple
 - **HEIC (photos iPhone)** : non lisible dans tous les navigateurs ; une capture d'écran fonctionne toujours.
 - **Polices Google** (Fraunces, Inter) chargées en ligne ; repli système sinon.
 - **Confidentialité** : la mention est purement informative, rien n'a changé dans le trajet des données (navigateur → fonction Vercel → API Anthropic ; sauvegarde locale sur l'appareil).
+
+## Phénix Perso (particuliers)
+
+La version grand public : un directeur financier personnel qui lit un relevé de compte, reconstruit le budget, chiffre les fuites, organise le cash-flow, attaque les dettes et livre un plan 90 jours. Pensée pour un abonnement à une dizaine d'euros par mois : ce que l'abonné garde, c'est **son espace**.
+
+**L'espace perso** (écran d'accueil, `perso.html`) : score Phénix et son évolution, revenus / dépenses / reste / taux d'épargne du dernier bilan, épargne de sécurité avec cible réglable (1 à 6 mois de dépenses) et délai pour l'atteindre, objectifs d'épargne (montant, date, effort mensuel calculé, progression), abonnements repérés avec suivi des résiliations (« libéré grâce à toi : X € / mois »), dettes et stratégie, plan 90 jours avec les prochaines actions à cocher, budget mensuel issu de l'optimisation du cash-flow, courbes d'évolution sur les bilans successifs, rappel de bilan mensuel.
+
+**Le bilan** : mêmes trois entrées que la version Pro (coller, importer, saisir) mais avec des postes de particulier (logement, énergie et télécoms, courses, transport, assurances, santé, enfants, abonnements, shopping, sorties, frais bancaires, impôts, crédits, autres), un contexte simple (prénom, foyer, logement, situation pro, tranche d'âge, objectif) et cinq analyses : 01 Audit de ton argent (score sur 5 axes : budget, épargne, dépenses, dettes, sécurité), 02 Plan de richesse, 03 Optimisation du cash-flow, 04 Fuites d'argent, 05 Destructeur de dettes. Le bilan complet enchaîne les cinq pour un seul bilan de quota.
+
+**Cadre légal** (détail dans `CONFORMITE-PERSO.md`) : le persona interdit tout conseil en investissement, toute recommandation de produit, d'établissement, de crédit ou de rachat de crédits, et renvoie vers un conseiller agréé, un Point Conseil Budget ou la Banque de France. Chaque rapport porte un avertissement. Côté RGPD : rien n'est stocké côté serveur, les données vivent sur l'appareil, écran de transparence à la première connexion, page « Mes données » (inventaire, export JSON, effacement), politique de confidentialité intégrée.
+
+**Variables d'environnement** (en plus de celles ci-dessus, qui restent partagées : clé Anthropic, secret des codes, clé admin, modèle, effort) :
+
+| Variable | Rôle |
+|---|---|
+| `PERSO_DAILY_QUOTA` | bilans par jour et par code, `5` par défaut (un bilan complet = 1) |
+| `PERSO_ACCESS_CODES` | codes fixes : `ESSAI:Offre essai:2026-12-31` |
+| `PERSO_REVOKED` | identifiants de codes Perso désactivés : `DUPONT,MARTIN` |
+
+**Codes** : `PXP-MARIE-2710-K7QM3XZ2`, générés depuis `/admin` (choisir « Phénix Perso ») ou par `POST /api/perso` `{"action":"mint","adminKey":"…","name":"Marie","months":1}`. Signés avec le même secret mais dans un espace distinct : un code Perso n'ouvre pas l'outil Pro ; un code Pro ouvre aussi l'espace Perso (bonus client entreprise). Le message prêt à envoyer pointe vers `/perso`.
+
+**Abonnement** : rien n'est branché. Le plus simple avec l'existant : un lien de paiement Stripe en abonnement mensuel, un scénario Make qui à chaque `invoice.paid` appelle `mint` avec `months: 2` (un mois de marge) et envoie le code par ActiveCampaign ; à `customer.subscription.deleted`, ajoute l'identifiant à `PERSO_REVOKED`. L'abonné n'a jamais à ressaisir un code tant qu'il paie : la page vérifie le code à chaque ouverture et n'affiche l'écran de code que s'il est refusé.
+
+**Personnaliser** : éditeur, contact et date de la politique de confidentialité dans `window.PERSO_CONFIG` en tête de `perso.html` (`editeur`, `contact`, `privacyDate`) ; ces trois valeurs sont à renseigner avant la mise en ligne.
+
+**Tests** : `npm test` (fonction serveur, IA simulée) et `npm run test:ui` (deux parcours complets de `perso.html` dans jsdom : `npm install --no-save jsdom` une fois).
 
 ## Intégration Academy
 

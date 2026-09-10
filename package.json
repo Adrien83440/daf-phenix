@@ -1,7 +1,8 @@
 {
   "name": "daf-phenix",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "DAF Phénix — directeur financier IA pour dirigeants de TPE/PME (site statique + fonction Vercel)",
-  "engines": { "node": ">=18" }
+  "description": "DAF Phénix (dirigeants de TPE/PME) et Phénix Perso (particuliers) — directeur financier IA, site statique + fonctions Vercel",
+  "engines": { "node": ">=18" },
+  "scripts": { "test": "node --test test/*.test.js", "test:ui": "node test/ui/run.js" }
 }

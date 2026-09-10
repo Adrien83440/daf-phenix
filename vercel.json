@@ -1,6 +1,5 @@
 {
   "cleanUrls": true,
-  "functions": {
-    "api/daf.js": { "maxDuration": 300 }
-  }
+  "regions": ["cdg1"],
+  "functions": { "api/daf.js": { "maxDuration": 300 }, "api/perso.js": { "maxDuration": 300 } }
 }

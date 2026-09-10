@@ -256,7 +256,7 @@ function rateLimited(ip) {
 // ---------------------------------------------------------------------------
 //  Appel Claude (sortie JSON structurée, prompt caching sur le préfixe)
 // ---------------------------------------------------------------------------
-async function callClaude(content, schema, maxTokens) {
+async function callClaude(content, schema, maxTokens, system) {
   if (!API_KEY) throw new Error("ANTHROPIC_API_KEY manquante côté serveur.");
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, 285000);
@@ -268,7 +268,7 @@ async function callClaude(content, schema, maxTokens) {
       body: JSON.stringify({
         model: MODEL,
         max_tokens: maxTokens,
-        system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
+        system: [{ type: "text", text: system || SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: [{ role: "user", content: content }],
         output_config: { effort: EFFORT, format: { type: "json_schema", schema: schema } }
       }),
@@ -405,4 +405,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, consumeRun: consumeRun, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
+module.exports._internal = { callClaude: callClaude, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, consumeRun: consumeRun, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };

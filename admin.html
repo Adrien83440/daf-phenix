@@ -47,19 +47,21 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 .badge{display:inline-block;padding:5px 11px;border-radius:999px;font-size:12.5px;border:1px solid rgba(143,217,168,.3);color:var(--ok);background:rgba(143,217,168,.12);margin-top:12px}
 .badge.bad{border-color:rgba(255,122,122,.3);color:var(--bad);background:rgba(255,122,122,.12)}
 </style>
-<script>window.DAF_CONFIG = { endpoint: "/api/daf" };</script>
+<script>window.DAF_CONFIG = { endpoint: "/api/daf", endpointPerso: "/api/perso" };</script>
 </head>
 <body>
 <div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
 <div class="wrap">
   <div class="glass">
     <h1>Accès clients</h1>
-    <p class="sub">Génère un code DAF Phénix pour un client. Le code est valable jusqu'à la fin du mois choisi et se vérifie sans base de données.</p>
+    <p class="sub">Génère un code d'accès pour un client. Le code est valable jusqu'à la fin du mois choisi et se vérifie sans base de données.</p>
+    <label class="lbl" for="product">Produit</label>
+    <select class="field" id="product"><option value="pro">DAF Phénix (entreprises, PHX-…)</option><option value="perso">Phénix Perso (particuliers, PXP-…)</option></select>
     <label class="lbl" for="admin">Clé admin</label>
     <input class="field" id="admin" type="password" autocomplete="current-password" placeholder="DAF_ADMIN_KEY">
     <div class="grid" style="margin-top:14px">
       <div><label class="lbl" for="name">Client (nom, marque)</label><input class="field" id="name" placeholder="Le Comptoir"></div>
-      <div><label class="lbl" for="months">Durée</label><select class="field" id="months"><option value="1">1 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="24">24 mois</option></select></div>
+      <div><label class="lbl" for="months">Durée</label><select class="field" id="months"><option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="24">24 mois</option></select></div>
     </div>
     <button class="btn primary" id="mint" type="button">Générer le code</button>
     <div class="err" id="mint-err"></div>
@@ -72,12 +74,12 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
         <button class="btn ghost" id="copy-msg" type="button">Copier le message</button>
       </div>
     </div>
-    <p class="hint">Pour désactiver un client avant l'échéance : ajoute son identifiant (par exemple LECOMPTOIR, la partie entre PHX- et la date) à la variable DAF_REVOKED sur Vercel, puis redéploie.</p>
+    <p class="hint">Pour désactiver un client avant l'échéance : ajoute son identifiant (la partie entre le préfixe et la date, par exemple LECOMPTOIR) à la variable DAF_REVOKED (codes PHX) ou PERSO_REVOKED (codes PXP) sur Vercel, puis redéploie. Un code Pro ouvre aussi l'espace Perso ; l'inverse n'est pas vrai.</p>
   </div>
 
   <div class="glass">
     <h2>Vérifier un code</h2>
-    <input class="field" id="check" placeholder="PHX-…" autocapitalize="characters" spellcheck="false">
+    <input class="field" id="check" placeholder="PHX-… ou PXP-…" autocapitalize="characters" spellcheck="false">
     <button class="btn ghost" id="verify" type="button">Vérifier</button>
     <div id="check-out"></div>
   </div>
@@ -86,10 +88,13 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var ENDPOINT = (window.DAF_CONFIG || {}).endpoint || "/api/daf";
+  var ENDPOINT_PERSO = (window.DAF_CONFIG || {}).endpointPerso || "/api/perso";
   var origin = location.origin.replace(/\/$/, "");
+  function endpointFor(product) { return product === "perso" ? ENDPOINT_PERSO : ENDPOINT; }
+  function productOfCode(code) { return /^PXP-/i.test(String(code || "").trim()) ? "perso" : "pro"; }
   try { $("admin").value = sessionStorage.getItem("daf.admin") || ""; } catch (e) {}
-  function post(p) {
-    return fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(p) })
+  function post(p, product) {
+    return fetch(endpointFor(product), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(p) })
       .then(function (r) { return r.json(); }).catch(function () { return { ok: false, error: "Serveur injoignable." }; });
   }
   function copy(text, btn, label) {
@@ -103,13 +108,16 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
     if (!name) { $("mint-err").textContent = "Entre le nom du client."; return; }
     try { sessionStorage.setItem("daf.admin", key); } catch (e) {}
     var b = $("mint"); b.disabled = true;
-    post({ action: "mint", adminKey: key, name: name, months: $("months").value }).then(function (j) {
+    var product = $("product").value;
+    post({ action: "mint", adminKey: key, name: name, months: $("months").value }, product).then(function (j) {
       b.disabled = false;
       if (!j.ok) { $("mint-err").textContent = j.error || "Erreur."; return; }
       $("code").textContent = j.code;
-      $("code-meta").textContent = "Client " + j.label + " · valable jusqu'au " + j.expires;
+      $("code-meta").textContent = (product === "perso" ? "Abonné(e) " : "Client ") + j.label + " · valable jusqu'au " + j.expires;
       $("code-box").hidden = false; $("msg-wrap").hidden = false;
-      $("msg").value = "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : " + origin + "/\nCode d'accès : " + j.code + "\n\nColle ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Accès valable jusqu'au " + j.expires + ".";
+      $("msg").value = product === "perso"
+        ? "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : " + origin + "/perso\nCode d'accès : " + j.code + "\n\nColle ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Ton espace se met à jour à chaque bilan. Accès valable jusqu'au " + j.expires + "."
+        : "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : " + origin + "/\nCode d'accès : " + j.code + "\n\nColle ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Accès valable jusqu'au " + j.expires + ".";
     });
   });
   $("copy-code").addEventListener("click", function () { copy($("code").textContent, $("copy-code"), "Copier le code"); });
@@ -117,9 +125,10 @@ textarea.field{min-height:120px;resize:vertical;line-height:1.45}
   $("verify").addEventListener("click", function () {
     var code = $("check").value.trim(); if (!code) return;
     $("check-out").innerHTML = "";
-    post({ action: "verify", code: code }).then(function (j) {
+    var product = productOfCode(code);
+    post({ action: "verify", code: code }, product).then(function (j) {
       $("check-out").innerHTML = j.ok
-        ? '<span class="badge">Valide · ' + j.label + (j.expires ? " · jusqu'au " + j.expires : "") + " · " + j.quota.used + "/" + j.quota.limit + " analyses aujourd'hui</span>"
+        ? '<span class="badge">Valide · ' + (product === "perso" ? "Perso · " : "Pro · ") + j.label + (j.expires ? " · jusqu'au " + j.expires : "") + " · " + j.quota.used + "/" + j.quota.limit + (product === "perso" ? " bilans" : " analyses") + " aujourd'hui</span>"
         : '<span class="badge bad">' + (j.error || "Refusé") + "</span>";
     });
   });
