@@ -189,6 +189,27 @@ test("lecture trop longue : relance automatique en version compacte", async func
   assert.equal(lastRequest.output_config.effort, "medium");
 });
 
+test("bilan du mois : bilan précédent transmis, schéma dédié, refus sans précédent", async function () {
+  const code = P.mintCode("Suivi", 1).code;
+  let r = await call({ action: "analyse", code: code, runId: "S1", module: "suivi", etat: {}, context: {}, text: "" });
+  assert.equal(r.status, 500); assert.match(r.json.error, /premier bilan/);
+  replyWith(Object.assign(vide(P.schemaRapport("suivi")), { progres: [{ indicateur: "Reste chaque mois", avant: "170 €", apres: "260 €", tendance: "mieux", commentaire: "La salle résiliée se voit." }], defi_du_mois: { titre: "Zéro découvert", detail: "Solde positif le 27", gain_estime: "18 € d'agios" } }));
+  const precedent = { date: "2026-08-10T10:00:00Z", etat: { revenus_mensuels: 2180 }, score: 52, actions: [{ semaine: "S1", action: "Résilier Basic Fit", fait: true, fait_le: "2026-08-14" }, { semaine: "S2", action: "Virement automatique 100 €", fait: false }], libere: "PRLV BASIC FIT (29,99 €/mois)" };
+  r = await call({ action: "analyse", code: code, runId: "S1", module: "suivi", etat: { revenus_mensuels: 2180 }, context: {}, text: "", precedent: precedent });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const sch = lastRequest.output_config.format.schema;
+  assert.ok(sch.properties.progres && sch.properties.defi_du_mois && sch.properties.score && !sch.properties.fuites, "schéma du suivi");
+  const txt = lastRequest.messages[0].content[0].text;
+  assert.match(txt, /Bilan précédent du 2026-08-10 \(score Phénix 52\/100\)/);
+  assert.match(txt, /\[FAIT\] S1 Résilier Basic Fit \(coché le 2026-08-14\)/);
+  assert.match(txt, /\[pas fait\] S2 Virement/);
+  assert.match(txt, /Abonnements résiliés depuis/);
+  assert.match(lastRequest.messages[0].content[1].text, /BILAN DU MOIS/);
+  assert.equal(r.json.result.progres[0].tendance, "mieux");
+  assert.equal(r.json.result.defi_du_mois.titre, "Zéro découvert");
+  assert.deepEqual(r.json.result.fuites, []);
+});
+
 test("refus et réponse illisible de l'IA remontent en erreur lisible", async function () {
   const code = P.mintCode("Erreurs", 1).code;
   nextReply = { stop_reason: "refusal", content: [] };

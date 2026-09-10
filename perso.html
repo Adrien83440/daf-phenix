@@ -460,6 +460,19 @@ select.field option{color:#111;background:#fff}
 .catgrid .e span{display:block;font-size:11.5px;color:var(--ink3);margin-bottom:4px;line-height:1.3}
 .catgrid .e input{width:100%;background:transparent;border:0;outline:none;font-family:var(--serif);font-size:19px;color:var(--ink);padding:0;border-bottom:1px solid transparent}
 .catgrid .e input:focus{border-bottom-color:var(--gold)}
+.mod.suivi{border:1.5px solid rgba(123,79,184,.55);background:linear-gradient(160deg,rgba(123,79,184,.2),rgba(220,168,78,.08))}
+.mod .reco{display:inline-block;font-style:normal;font-size:11px;color:#C9B3F0;border:1px solid rgba(123,79,184,.6);border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle}
+.progres{display:flex;flex-direction:column;gap:8px}
+.prow{display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:var(--r2);background:var(--fill);border:1px solid var(--line)}
+.p-main{flex:1;min-width:0}.p-main b{font-weight:500;display:block}.p-main p{color:var(--ink2);font-size:13.5px;line-height:1.4;margin-top:2px}
+.p-side{text-align:right;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.p-vals{font-family:var(--serif);font-size:16px;white-space:nowrap}.p-vals i{font-style:normal;color:var(--gold2);margin:0 4px}
+.defi{padding:16px 18px;border-radius:var(--r2);background:linear-gradient(160deg,rgba(123,79,184,.22),rgba(220,168,78,.12));border:1px solid rgba(123,79,184,.5)}
+.defi-t{font-family:var(--serif);font-size:20px;margin-bottom:4px}.defi p{color:var(--ink2);font-size:14px;line-height:1.5}
+.defi-g{margin-top:8px;font-family:var(--serif);color:var(--gold2);font-size:18px}
+.wk{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 8px;font-size:13px;color:var(--ink2)}.wk b{font-weight:500;color:var(--ink)}.wk span{font-family:var(--serif);color:var(--gold2)}
+.wk.late b{color:var(--warn)}
+.tip{font-family:var(--serif);font-size:17px;line-height:1.45}
 .disc{margin-top:22px;padding:12px 14px;border-radius:var(--r2);border:1px solid var(--line);font-size:12px;color:var(--ink3);line-height:1.5}
 @media (min-width:640px){
   .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -796,10 +809,49 @@ var PERSO = (function () {
     plan:   { num: "02", titre: "Plan de richesse",           sub: "Feuille de route pour construire ton patrimoine : revenus, épargne de sécurité, dettes, projets. Sans jamais te vendre un placement." },
     treso:  { num: "03", titre: "Optimisation du cash-flow", sub: "Chaque euro qui rentre reçoit un rôle : quoi couper, quoi garder, quoi automatiser, où va ton argent chaque mois." },
     fuites: { num: "04", titre: "Fuites d'argent",           sub: "Abonnements oubliés, doublons, frais bancaires, achats impulsifs. Classés par coût annuel." },
-    dettes: { num: "05", titre: "Destructeur de dettes",     sub: "Crédit conso, renouvelable, auto, découvert : l'ordre de remboursement le plus intelligent, avec projection." }
+    dettes: { num: "05", titre: "Destructeur de dettes",     sub: "Crédit conso, renouvelable, auto, découvert : l'ordre de remboursement le plus intelligent, avec projection." },
+    suivi:  { num: "06", titre: "Bilan du mois",             sub: "Compare avec ton dernier bilan : ce qui a avancé, ce que tu as validé, le défi et le plan du mois qui vient." }
   };
-  var ORDER = ["audit", "fuites", "treso", "dettes", "plan"];
+  var ORDER = ["suivi", "audit", "fuites", "treso", "dettes", "plan"];
   var MENU = ["audit", "plan", "treso", "fuites", "dettes"];
+  var CYCLE_DAYS = 30;
+  var TIPS = [
+    "Programme un virement automatique vers ton livret le lendemain de la paie : ce qui part en premier ne manque jamais.",
+    "Regroupe tes prélèvements entre le 1er et le 5 du mois : tu sais dès le 6 ce qu'il te reste vraiment.",
+    "Un abonnement que tu n'as pas ouvert depuis 30 jours est un abonnement à résilier. Vérifie-en un cette semaine.",
+    "Fais tes courses avec une liste et le ventre plein : c'est la parade la plus simple contre les achats impulsifs.",
+    "Règle des 24 heures : pour tout achat non prévu au-dessus de 50 €, attends une journée. Souvent l'envie passe.",
+    "Regarde ton solde chaque lundi matin, deux minutes. La régularité compte plus que la précision.",
+    "Note les grosses dépenses annuelles (assurance, impôts, rentrée, vacances) et mets de côté un douzième chaque mois.",
+    "Une enveloppe « plaisirs » chiffrée, c'est la liberté de dépenser sans culpabilité et sans dérapage.",
+    "Un imprévu de 300 € ne devrait jamais passer par le découvert : vise d'abord une petite réserve dédiée.",
+    "Appelle ta banque pour demander la suppression des frais de tenue de compte ou d'un agio : ça marche plus souvent qu'on ne croit.",
+    "Compare ton forfait mobile et ta box une fois par an : les prix baissent, les anciens contrats ne suivent pas.",
+    "Les assurances se résilient à tout moment après un an : un devis concurrent suffit à faire baisser la tienne.",
+    "Vends ce que tu n'as pas utilisé depuis un an : l'argent dort dans tes placards.",
+    "Fais la simulation des aides sur mesdroits sociaux : des droits non réclamés se chiffrent souvent en centaines d'euros par an.",
+    "Un objectif avec une date et un montant est deux fois plus souvent atteint qu'une bonne intention.",
+    "Paie en une fois plutôt qu'en plusieurs : le paiement fractionné cache un crédit et brouille ton reste à vivre.",
+    "Rembourse d'abord la dette au taux le plus élevé, même si elle est petite : c'est celle qui te coûte le plus.",
+    "Quand une dette est soldée, garde le même virement mensuel vers l'épargne : tu ne sentiras pas la différence.",
+    "Cuisine deux fois plus le dimanche : les repas de la semaine sont réglés et les livraisons disparaissent.",
+    "Vérifie tes lignes de moins de 5 € : les petits prélèvements oubliés sont les plus faciles à couper.",
+    "Fixe-toi un plafond de sorties par semaine, pas par mois : c'est plus facile à tenir et à rattraper.",
+    "Un compte séparé pour les projets évite de piocher dedans « juste ce mois-ci ».",
+    "Renseigne-toi sur le chèque énergie et les tarifs sociaux : ils s'appliquent à plus de foyers qu'on ne pense.",
+    "Avant un gros achat, calcule combien d'heures de travail il représente : la question change souvent la réponse.",
+    "Arrondis chaque dépense à l'euro supérieur dans ta tête et vire la différence en fin de mois : petit, mais régulier.",
+    "Une augmentation ou une prime ? Vire la moitié vers l'épargne avant de t'y habituer.",
+    "Regarde d'abord ce que tu as déjà gagné ce mois-ci avant de regarder ce qui manque : la motivation vient de là.",
+    "Ton découvert autorisé n'est pas de l'argent disponible, c'est un crédit à 15 % : traite-le comme tel.",
+    "Deux minutes chaque semaine pour cocher une action de ton plan valent mieux qu'une heure une fois par trimestre.",
+    "Le meilleur moment pour refaire ton bilan, c'est juste après la paie : tu vois le mois entier d'un coup."
+  ];
+  function tipOfWeek(offset) {
+    var week = Math.floor(Date.now() / 6048e5);
+    return TIPS[((week + (offset || 0)) % TIPS.length + TIPS.length) % TIPS.length];
+  }
+  function weekOf(semaine) { var m = String(semaine || "").match(/(\d+)/); return m ? parseInt(m[1], 10) : 99; }
 
   var SITUATIONS = [["seul", "Je vis seul(e)"], ["couple", "En couple"], ["couple_enfants", "En couple avec enfant(s)"], ["seul_enfants", "Parent solo"], ["colocation", "Colocation ou chez mes parents"]];
   var LOGEMENTS = ["Locataire", "Propriétaire avec crédit", "Propriétaire sans crédit", "Hébergé(e)"];
@@ -1066,11 +1118,30 @@ var PERSO = (function () {
   function planItem(p, id, on) {
     return '<label class="check' + (on ? " on" : "") + '"><input type="checkbox" data-check="' + esc(id) + '"' + (on ? " checked" : "") + '><span class="box"></span><div><div class="c-top"><span class="week">' + esc(p.semaine) + "</span>" + (p.difficulte ? tag(p.difficulte, p.difficulte === "facile" ? "ok" : p.difficulte === "dur" ? "bad" : "warn") : "") + "</div><b>" + esc(p.action) + "</b><p>" + esc(p.impact) + "</p></div></label>";
   }
-  function renderPlan(items, checked, prefix) {
+  function renderPlan(items, checked, prefix, titre) {
     if (!items || !items.length) return "";
     checked = checked || {};
-    return section("Plan 90 jours", '<div class="plan">' + items.map(function (p, i) { var id = prefix + ":" + i; return planItem(p, id, !!checked[id]); }).join("") + "</div>", "sec-plan");
+    return section(titre || "Plan 90 jours", '<div class="plan">' + items.map(function (p, i) { var id = prefix + ":" + i; return planItem(p, id, !!checked[id]); }).join("") + "</div>", "sec-plan");
   }
+  function renderProgres(items) {
+    if (!items || !items.length) return "";
+    var kind = { mieux: "ok", stable: "warn", moins_bien: "bad" }, lbl = { mieux: "Mieux", stable: "Stable", moins_bien: "À surveiller" };
+    return section("Depuis ton dernier bilan", '<div class="progres">' + items.map(function (p) {
+      var t = String(p.tendance || "stable");
+      return '<div class="prow"><div class="p-main"><b>' + esc(p.indicateur) + "</b><p>" + esc(p.commentaire) + '</p></div><div class="p-side"><span class="p-vals">' + esc(p.avant) + ' <i>→</i> ' + esc(p.apres) + "</span>" + tag(lbl[t] || t, kind[t] || "warn") + "</div></div>";
+    }).join("") + "</div>");
+  }
+  function renderValidees(done, pending) {
+    var html = "";
+    if (done && done.length) html += section("Ce que tu as fait", '<ul class="dlist">' + done.map(function (a) { return '<li><span class="dot ok"></span><div><b>' + esc(a.action) + "</b><p>" + esc(a.effet) + "</p></div></li>"; }).join("") + "</ul>");
+    if (pending && pending.length) html += section("Ce qui attend encore", '<ul class="dlist">' + pending.map(function (a) { return '<li><span class="dot warn"></span><div><b>' + esc(a.action) + "</b><p>" + esc(a.conseil) + "</p></div></li>"; }).join("") + "</ul>");
+    return html;
+  }
+  function renderDefi(d) {
+    if (!d || !d.titre) return "";
+    return section("Ton défi du mois", '<div class="defi"><div class="defi-t">' + esc(d.titre) + "</div><p>" + esc(d.detail) + "</p>" + (d.gain_estime ? '<div class="defi-g">' + esc(d.gain_estime) + "</div>" : "") + "</div>");
+  }
+
   function renderNotes(hyp, questions) {
     var html = "";
     if (hyp && hyp.length) html += '<div class="notes"><h4>Hypothèses retenues</h4><ul>' + hyp.map(function (h) { return "<li>" + esc(h) + "</li>"; }).join("") + "</ul></div>";
@@ -1085,8 +1156,11 @@ var PERSO = (function () {
     var html = '<div class="rapport" data-mod="' + esc(mod) + '">';
     html += '<header class="r-head"><span class="r-num">' + esc(m.num) + '</span><h2>' + esc(r.titre || m.titre) + "</h2></header>";
     if (r.resume) html += '<p class="r-resume">' + esc(r.resume) + "</p>";
-    if (mod === "audit") html += renderScore(r.score);
+    if (mod === "audit" || mod === "suivi") html += renderScore(r.score);
+    html += renderProgres(r.progres);
     html += renderKpis(r.kpis);
+    html += renderValidees(r.actions_validees, r.actions_en_attente);
+    html += renderDefi(r.defi_du_mois);
     html += renderDiagnostic(r.diagnostic);
     html += renderFuites(r.fuites);
     html += renderOpportunites(r.opportunites);
@@ -1094,7 +1168,7 @@ var PERSO = (function () {
     html += renderDettes(r.dettes, r.strategie_dettes);
     html += renderFeuille(r.feuille_de_route);
     html += renderAutomatisations(r.automatisations);
-    html += renderPlan(r.plan_90_jours, opts.checked, (opts.runId || "run") + ":" + mod);
+    html += renderPlan(r.plan_90_jours, opts.checked, (opts.runId || "run") + ":" + mod, mod === "suivi" ? "Ton plan du mois" : "Plan 90 jours");
     html += renderNotes(r.hypotheses, r.questions);
     if (r.mot_du_daf) html += '<blockquote class="mot">' + esc(r.mot_du_daf) + "</blockquote>";
     html += "</div>";
@@ -1119,8 +1193,10 @@ var PERSO = (function () {
 
   function runSummary(run) {
     var mods = (run && run.modules) || [];
-    if (mods.length === 5) return "Bilan complet";
-    return mods.map(function (k) { return MODULES[k] ? MODULES[k].titre : k; }).join(", ");
+    var suivi = mods.indexOf("suivi") > -1, rest = mods.filter(function (k) { return k !== "suivi"; });
+    var base = rest.length === 5 ? "Bilan complet" : rest.map(function (k) { return MODULES[k] ? MODULES[k].titre : k; }).join(", ");
+    if (!suivi) return base;
+    return "Bilan du mois" + (base ? " + " + base.toLowerCase() : "");
   }
 
   // Courbe simple (SVG) pour l'évolution dans l'espace perso.
@@ -1144,7 +1220,7 @@ var PERSO = (function () {
   }
 
   return {
-    MODULES: MODULES, ORDER: ORDER, MENU: MENU, SITUATIONS: SITUATIONS, LOGEMENTS: LOGEMENTS, STATUTS: STATUTS, AGES: AGES, OBJECTIFS: OBJECTIFS, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, SCORE_KEYS: SCORE_KEYS,
+    MODULES: MODULES, ORDER: ORDER, MENU: MENU, CYCLE_DAYS: CYCLE_DAYS, TIPS: TIPS, tipOfWeek: tipOfWeek, weekOf: weekOf, SITUATIONS: SITUATIONS, LOGEMENTS: LOGEMENTS, STATUTS: STATUTS, AGES: AGES, OBJECTIFS: OBJECTIFS, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, SCORE_KEYS: SCORE_KEYS,
     esc: esc, toNum: toNum, eur: eur, pct: pct, mois: mois,
     emptyEtat: emptyEtat, depensesMap: depensesMap, setDepenses: setDepenses, etatFromForm: etatFromForm, etatTotals: etatTotals, parseRecurrents: parseRecurrents,
     renderRapport: renderRapport, renderScore: renderScore, renderAllocation: renderAllocation, renderEtatMois: renderEtatMois, planItem: planItem, sparkline: sparkline,
@@ -1168,8 +1244,8 @@ var PERSO = (function () {
   var S = {
     code: "", label: "", expires: "", product: "", email: "", tmpPw: "", gateMode: "account", quota: { used: 0, limit: 5 }, consentAt: "",
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
-    etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {},
-    goals: [], cancelled: {}, coussin: 3, cancel: false, prevScreen: "home"
+    etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {}, checksAt: {},
+    goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home"
   };
   var FIELDS = [
     ["revenus_mensuels", "Revenus nets / mois"], ["epargne_mensuelle", "Mis de côté / mois"], ["epargne_disponible", "Épargne disponible"],
@@ -1203,7 +1279,7 @@ var PERSO = (function () {
 
   // --- persistance (appareil uniquement) --------------------------------------
   function persistable() {
-    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin };
+    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, checksAt: S.checksAt, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin };
   }
   var save = debounce(function () { saveNow(); }, 500);
   function saveNow() { try { localStorage.setItem(KEY, JSON.stringify(persistable())); } catch (e) { /* stockage plein : on continue */ } }
@@ -1292,8 +1368,38 @@ var PERSO = (function () {
 
   // --- espace perso -----------------------------------------------------------------
   function lastRun() { return S.history[0] || null; }
+  function setCheck(id, on) { S.checks[id] = on; if (on) S.checksAt[id] = new Date().toISOString(); else delete S.checksAt[id]; }
+  function cycle(run) {
+    var start = new Date(run.date).getTime(), day = Math.max(1, Math.floor((Date.now() - start) / 864e5) + 1);
+    return { day: Math.min(PERSO.CYCLE_DAYS, day), week: Math.min(12, Math.floor((day - 1) / 7) + 1), due: day > PERSO.CYCLE_DAYS, dueDate: new Date(start + PERSO.CYCLE_DAYS * 864e5), daysLeft: Math.max(0, PERSO.CYCLE_DAYS - day) };
+  }
+  function streak() {
+    // mois consécutifs avec au moins un bilan, en partant du mois le plus récent
+    var months = {}; S.history.forEach(function (r) { months[String(r.date).slice(0, 7)] = true; });
+    var keys = Object.keys(months).sort().reverse(); if (!keys.length) return 0;
+    var n = 1, cur = keys[0];
+    for (var i = 1; i < keys.length; i++) { var d = new Date(cur + "-01T00:00:00Z"); d.setUTCMonth(d.getUTCMonth() - 1); var prev = d.toISOString().slice(0, 7); if (keys[i] === prev) { n++; cur = prev; } else break; }
+    return n;
+  }
+  function buildPrecedent(run) {
+    if (!run) return null;
+    var libere = Object.keys(S.cancelled).map(function (k) { return k + " (" + eur(S.cancelled[k].montant) + "/mois)"; }).join(", ");
+    return { date: run.date, etat: run.etat, score: scoreOf(run), actions: planItems(run).map(function (x) { return { semaine: x.p.semaine, action: x.p.action, fait: !!S.checks[x.id], fait_le: S.checksAt[x.id] || "" }; }), libere: libere };
+  }
+  function icsReminder() {
+    var run = lastRun(), start = run ? cycle(run).dueDate : new Date(Date.now() + 30 * 864e5);
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    var d = start.getFullYear() + pad(start.getMonth() + 1) + pad(start.getDate());
+    var ics = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Phenix Perso//FR", "BEGIN:VEVENT", "UID:phenix-perso-bilan@" + location.host, "DTSTAMP:" + new Date().toISOString().replace(/[-:]/g, "").slice(0, 15) + "Z", "DTSTART:" + d + "T190000", "DURATION:PT20M", "RRULE:FREQ=MONTHLY", "SUMMARY:Mon bilan Phénix Perso", "DESCRIPTION:Colle ton relevé du mois et lance ton bilan : " + location.origin + "/perso", "BEGIN:VALARM", "TRIGGER:-PT0M", "ACTION:DISPLAY", "DESCRIPTION:Bilan Phénix Perso", "END:VALARM", "END:VEVENT", "END:VCALENDAR"].join("\r\n");
+    var blob = new Blob([ics], { type: "text/calendar" });
+    var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "bilan-phenix-perso.ics";
+    document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast("Rappel mensuel prêt : ouvre le fichier pour l'ajouter à ton agenda.");
+  }
   function lastWith(key) { for (var i = 0; i < S.history.length; i++) if (S.history[i].results && S.history[i].results[key]) return S.history[i]; return null; }
-  function scoreOf(run) { var a = run && run.results && run.results.audit; return a && a.score ? toNum(a.score.global) : 0; }
+  // Le bilan du mois recalcule le score : il prime sur l'audit du même bilan.
+  function scoreObj(run) { var r = run && run.results; if (!r) return null; var s = r.suivi && r.suivi.score && toNum(r.suivi.score.global) ? r.suivi.score : (r.audit && r.audit.score && toNum(r.audit.score.global) ? r.audit.score : null); return s; }
+  function scoreOf(run) { var s = scoreObj(run); return s ? toNum(s.global) : 0; }
   function card(title, inner, opts) {
     opts = opts || {};
     return '<div class="glass hcard' + (opts.wide ? " wide" : "") + '"' + (opts.id ? ' id="' + opts.id + '"' : "") + "><h2>" + esc(title) + (opts.small ? "<small>" + esc(opts.small) + "</small>" : "") + "</h2>" + inner + "</div>";
@@ -1302,11 +1408,11 @@ var PERSO = (function () {
     var run = lastRun(), name = S.ctx.prenom ? cap(S.ctx.prenom) : "";
     $("home-title").textContent = "Bonjour" + (name ? " " + name : "");
     if (run) {
-      var due = new Date(new Date(run.date).getTime() + 30 * 864e5), late = Date.now() > due.getTime();
-      $("home-next").hidden = false; $("home-next").className = "next" + (late ? " due" : "");
-      $("home-next-txt").textContent = late ? "C'est le moment de refaire ton bilan (le dernier date du " + fmtDate(run.date) + ")" : "Prochain bilan conseillé : " + fmtDate(due.toISOString());
-      $("home-sub").textContent = "Voici où en sont tes finances d'après ton bilan du " + fmtDate(run.date) + ". Coche tes actions, suis tes objectifs, et refais un bilan chaque mois pour voir la courbe monter.";
-      $("btn-home-bilan-txt").textContent = "Refaire un bilan";
+      var cy = cycle(run);
+      $("home-next").hidden = false; $("home-next").className = "next" + (cy.due ? " due" : "");
+      $("home-next-txt").textContent = cy.due ? "C'est l'heure de ton bilan du mois (le dernier date du " + fmtDate(run.date) + ")" : "Jour " + cy.day + " sur " + PERSO.CYCLE_DAYS + " · prochain bilan le " + fmtDate(cy.dueDate.toISOString());
+      $("home-sub").textContent = cy.due ? "Un mois s'est écoulé : colle ton nouveau relevé, Phénix compare avec le bilan précédent, reconnaît ce que tu as fait et te donne le plan du mois qui vient." : "Voici où en sont tes finances d'après ton bilan du " + fmtDate(run.date) + ". Coche tes actions de la semaine, suis tes objectifs, et dans " + cy.daysLeft + " jour" + (cy.daysLeft > 1 ? "s" : "") + " on fait le point ensemble.";
+      $("btn-home-bilan-txt").textContent = cy.due ? "Faire mon bilan du mois" : "Refaire un bilan";
     } else {
       $("home-next").hidden = true;
       $("home-sub").textContent = "Ton espace pour piloter ton argent. Commence par ton premier bilan : cinq minutes, ton relevé des deux ou trois derniers mois.";
@@ -1315,23 +1421,23 @@ var PERSO = (function () {
     $("home-onb").hidden = !!run;
     var html = "";
     if (run) {
-      html += cardScore() + cardMois(run) + cardCoussin(run);
+      html += cardPlan(run) + cardProgress(run) + cardTip() + cardScore() + cardMois(run) + cardCoussin(run);
     }
     html += cardGoals(run);
     if (run) {
-      html += cardSubs(run) + cardDettes(run) + cardPlan(run) + cardBudget() + cardEvolution();
-    }
+      html += cardSubs(run) + cardDettes(run) + cardBudget() + cardEvolution();
+    } else html += cardTip();
     $("home-grid").innerHTML = html;
     setTimeout(animateBars, 60);
   }
   function cardScore() {
-    var run = lastWith("audit");
+    var run = S.history.filter(scoreOf)[0];
     if (!run) return card("Score Phénix", '<p class="hint" style="margin:0">Lance « Audit de ton argent » pour obtenir ton score sur 100 et ses cinq axes.</p>');
     var prev = null;
     for (var i = S.history.indexOf(run) + 1; i < S.history.length; i++) if (scoreOf(S.history[i])) { prev = S.history[i]; break; }
     var d = prev ? scoreOf(run) - scoreOf(prev) : 0;
     var extra = prev ? '<div class="delta ' + (d > 0 ? "up" : d < 0 ? "down" : "") + '">' + (d > 0 ? "+" : "") + d + " depuis le " + fmtDate(prev.date) + "</div>" : '<div class="delta">Premier score, le ' + fmtDate(run.date) + "</div>";
-    return card("Score Phénix", PERSO.renderScore(run.results.audit.score, { mini: true, extra: extra }));
+    return card("Score Phénix", PERSO.renderScore(scoreObj(run), { mini: true, extra: extra }));
   }
   function cardMois(run) {
     var e = run.etat || PERSO.emptyEtat(), t = PERSO.etatTotals(e);
@@ -1404,16 +1510,37 @@ var PERSO = (function () {
     });
     return out;
   }
-  function weekNum(s) { var m = String(s || "").match(/(\d+)/); return m ? parseInt(m[1], 10) : 99; }
   function cardPlan(run) {
-    var items = planItems(run);
+    var items = planItems(run), cy = cycle(run);
     if (!items.length) return "";
     var done = items.filter(function (x) { return S.checks[x.id]; }).length;
-    var next = items.filter(function (x) { return !S.checks[x.id]; }).sort(function (a, b) { return weekNum(a.p.semaine) - weekNum(b.p.semaine); }).slice(0, 3);
-    var started = new Date(run.date), day = Math.max(1, Math.floor((Date.now() - started.getTime()) / 864e5) + 1);
-    var html = '<div class="prog"><b>' + done + " / " + items.length + '</b><div class="track"><i style="width:' + Math.round(done / items.length * 100) + '%"></i></div><span>jour ' + Math.min(90, day) + " / 90</span></div>";
-    html += next.length ? '<div class="next-actions">' + next.map(function (x) { return PERSO.planItem(x.p, x.id, false); }).join("") + "</div>" : '<p class="hint">Tout est coché. Refais un bilan pour la suite.</p>';
-    return card("Plan 90 jours", html, { wide: true, small: next.length ? "tes prochaines actions" : "" });
+    var todo = items.filter(function (x) { return !S.checks[x.id]; }).sort(function (a, b) { return PERSO.weekOf(a.p.semaine) - PERSO.weekOf(b.p.semaine); });
+    var late = todo.filter(function (x) { return PERSO.weekOf(x.p.semaine) < cy.week; }), now = todo.filter(function (x) { return PERSO.weekOf(x.p.semaine) === cy.week; }), later = todo.filter(function (x) { return PERSO.weekOf(x.p.semaine) > cy.week; });
+    if (!now.length && !late.length && later.length) { now = later.slice(0, 2); later = later.slice(2); }
+    var html = '<div class="prog"><b>' + done + " / " + items.length + '</b><div class="track"><i style="width:' + Math.round(done / items.length * 100) + '%"></i></div><span>semaine ' + cy.week + " · jour " + cy.day + " / " + PERSO.CYCLE_DAYS + "</span></div>";
+    if (late.length) html += '<div class="wk late"><b>En retard</b><span>' + late.length + "</span></div>" + '<div class="next-actions">' + late.slice(0, 3).map(function (x) { return PERSO.planItem(x.p, x.id, false); }).join("") + "</div>";
+    if (now.length) html += '<div class="wk"><b>Cette semaine</b><span>' + now.length + "</span></div>" + '<div class="next-actions">' + now.map(function (x) { return PERSO.planItem(x.p, x.id, false); }).join("") + "</div>";
+    if (!todo.length) html += '<p class="hint">Tout est coché. Bravo : ton bilan du mois reconnaîtra chaque action.</p>';
+    else if (!late.length && !now.length) html += '<p class="hint">Rien pour cette semaine.</p>';
+    if (later.length) html += '<p class="hint">' + later.length + " action" + (later.length > 1 ? "s" : "") + " à venir les semaines suivantes.</p>";
+    return card("Cette semaine", html, { wide: true, id: "card-week", small: "coche ce que tu as fait, Phénix s'en souvient" });
+  }
+  function cardProgress(run) {
+    var n = streak(), checked = Object.keys(S.checks).filter(function (k) { return S.checks[k]; }).length;
+    var first = S.history[S.history.length - 1], t0 = PERSO.etatTotals(first.etat), t1 = PERSO.etatTotals(run.etat);
+    var freed = Object.keys(S.cancelled).reduce(function (s, k) { return s + toNum(S.cancelled[k].montant); }, 0);
+    var scores = S.history.filter(scoreOf), sFirst = scores.length ? scoreOf(scores[scores.length - 1]) : 0, sLast = scores.length ? scoreOf(scores[0]) : 0;
+    var k = [
+      ["Série", n + " mois", n > 1 ? "d'affilée avec un bilan" : "commence la série le mois prochain"],
+      ["Actions validées", String(checked), checked ? "depuis le début" : "coche ta première action"],
+      ["Libéré", eur(freed) + " / mois", freed ? eur(freed * 12) + " par an" : "abonnements résiliés"],
+      ["Épargne de sécurité", PERSO.mois(t1.coussin), S.history.length > 1 ? (t1.coussin >= t0.coussin ? "+" : "") + (Math.round((t1.coussin - t0.coussin) * 10) / 10).toString().replace(".", ",") + " mois depuis le premier bilan" : "de dépenses devant toi"],
+      ["Score Phénix", sLast ? sLast + " / 100" : "—", scores.length > 1 ? (sLast >= sFirst ? "+" : "") + (sLast - sFirst) + " depuis le premier bilan" : "lance un audit pour le suivre"]
+    ];
+    return card("Tes progrès", '<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + k.map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("") + "</div>", { id: "card-progress", small: S.history.length + " bilan" + (S.history.length > 1 ? "s" : "") });
+  }
+  function cardTip() {
+    return card("Conseil de la semaine", '<p class="tip" id="tip-txt">' + esc(PERSO.tipOfWeek(S.tipOffset)) + '</p><div class="btns" style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost small" type="button" id="tip-next">Un autre</button><button class="btn ghost small" type="button" id="btn-ics">Rappel mensuel dans mon agenda</button></div>', { id: "card-tip", small: "un nouveau chaque semaine" });
   }
   function cardBudget() {
     var r = lastWith("treso");
@@ -1605,6 +1732,7 @@ var PERSO = (function () {
     $("read-alertes").innerHTML = e.alertes && e.alertes.length ? '<h3 class="sub">Alertes de Phénix</h3><ul class="alist">' + e.alertes.map(function (a) { return "<li>" + esc(a) + "</li>"; }).join("") + "</ul>" : "";
     $("read-manquant").innerHTML = e.manquant && e.manquant.length ? '<h3 class="sub">Il manque à Phénix</h3><ul class="alist q">' + e.manquant.map(function (a) { return "<li>" + esc(a) + "</li>"; }).join("") + "</ul>" : "";
     $("e-prec").value = "";
+    if (!Object.keys(S.sel).some(function (k) { return S.sel[k]; }) && suiviDispo()) { S.sel = { suivi: true, audit: true }; }
     renderMods();
   }
   function renderTot() {
@@ -1628,15 +1756,18 @@ var PERSO = (function () {
       return { nom: d.nom.trim() || "Dette", type: d.type, capital_restant: d.capital_restant, taux: d.taux, mensualite: d.mensualite, echeance: "" };
     });
   }
+  function suiviDispo() { return S.history.some(function (r) { return !S.run || r.id !== S.run.id; }) && (!S.view || S.history.some(function (r) { return r.id !== S.view.id; })); }
   function renderMods() {
     var all = PERSO.MENU.every(function (k) { return S.sel[k]; });
-    $("mods").innerHTML = PERSO.MENU.map(function (k) {
+    var suivi = suiviDispo();
+    if (!suivi) delete S.sel.suivi;
+    $("mods").innerHTML = (suivi ? '<div class="mod soft suivi' + (S.sel.suivi ? " on" : "") + '" data-k="suivi" role="switch" aria-checked="' + (!!S.sel.suivi) + '" tabindex="0"><span class="mnum">06</span><div class="mt"><b>' + esc(PERSO.MODULES.suivi.titre) + ' <em class="reco">Recommandé ce mois-ci</em></b><small>' + esc(PERSO.MODULES.suivi.sub) + '</small></div><span class="sw"></span></div>' : "") + PERSO.MENU.map(function (k) {
       var m = PERSO.MODULES[k];
       return '<div class="mod soft' + (S.sel[k] ? " on" : "") + '" data-k="' + k + '" role="switch" aria-checked="' + (!!S.sel[k]) + '" tabindex="0"><span class="mnum">' + m.num + '</span><div class="mt"><b>' + esc(m.titre) + "</b><small>" + esc(m.sub) + '</small></div><span class="sw"></span></div>';
     }).join("") + '<div class="mod full' + (all ? " on" : "") + '" data-k="all" role="switch" aria-checked="' + all + '" tabindex="0"><svg><use href="#i-bolt"/></svg><div class="mt"><b>Bilan complet</b><small>Les cinq analyses enchaînées, avec ton score Phénix. Compte pour un seul bilan dans ton quota du jour.</small></div><span class="sw"></span></div>';
-    var n = PERSO.MENU.filter(function (k) { return S.sel[k]; }).length;
-    $("btn-run-txt").textContent = n === 0 ? "Choisis une analyse" : n === 5 ? "Lancer le bilan complet" : n === 1 ? "Lancer l'analyse" : "Lancer les " + n + " analyses";
-    $("btn-run").disabled = n === 0;
+    var n = PERSO.MENU.filter(function (k) { return S.sel[k]; }).length, withSuivi = !!S.sel.suivi;
+    $("btn-run-txt").textContent = withSuivi ? "Lancer le bilan du mois" + (n === 5 ? " + bilan complet" : n ? " + " + n + " analyse" + (n > 1 ? "s" : "") : "") : (n === 0 ? "Choisis une analyse" : n === 5 ? "Lancer le bilan complet" : n === 1 ? "Lancer l'analyse" : "Lancer les " + n + " analyses");
+    $("btn-run").disabled = n === 0 && !withSuivi;
     $("run-hint").textContent = (n ? "Compte environ " + (n === 1 ? "une minute" : n + " minutes") + ". " : "") + "Bilans aujourd'hui : " + S.quota.used + " sur " + S.quota.limit + ".";
   }
 
@@ -1663,7 +1794,11 @@ var PERSO = (function () {
     if (!mods.length) { $("run-err").textContent = "Active au moins une analyse."; return; }
     var prec = $("e-prec").value.trim();
     var ctx = Object.assign({}, S.ctx); if (prec) ctx.precisions = (ctx.precisions ? ctx.precisions + "\n" : "") + prec;
-    var run = { id: S.lectureRunId || uid(), date: new Date().toISOString(), label: mods.length === 5 ? "Bilan complet" : (mods.length === 1 ? PERSO.MODULES[mods[0]].titre : mods.length + " analyses"), modules: mods, results: {}, errors: {}, etat: JSON.parse(JSON.stringify(S.etat)), ctx: ctx };
+    var runId = S.lectureRunId || uid();
+    var previous = S.history.filter(function (r) { return r.id !== runId; })[0] || null;
+    var precedent = mods.indexOf("suivi") > -1 ? buildPrecedent(previous) : null;
+    var rest = mods.filter(function (k) { return k !== "suivi"; });
+    var run = { id: runId, date: new Date().toISOString(), label: precedent ? "Bilan du mois" : (rest.length === 5 ? "Bilan complet" : (rest.length === 1 ? PERSO.MODULES[rest[0]].titre : rest.length + " analyses")), modules: mods, results: {}, errors: {}, etat: JSON.parse(JSON.stringify(S.etat)), ctx: ctx, previousId: previous ? previous.id : "" };
     S.lectureRunId = "";
     S.run = run;
     startRun(mods.map(function (k) { return { key: k, label: PERSO.MODULES[k].titre }; }), mods.length > 1 ? "Phénix enchaîne les analyses" : "Phénix analyse", "Les résultats s'affichent dès qu'il a terminé. Tu peux rester sur cette page.");
@@ -1672,7 +1807,7 @@ var PERSO = (function () {
       if (S.cancel) return;
       if (i >= mods.length) { finishRun(); return; }
       var k = mods[i]; setStatus(k, "doing");
-      api({ action: "analyse", runId: run.id, module: k, etat: run.etat, context: ctx, text: (S.rawText || "").slice(0, 30000) }).then(function (j) {
+      api({ action: "analyse", runId: run.id, module: k, etat: run.etat, context: ctx, text: (S.rawText || "").slice(0, 30000), precedent: k === "suivi" ? precedent : undefined }).then(function (j) {
         if (S.cancel) return;
         if (j.ok) { run.results[k] = j.result; S.quota = j.quota || S.quota; setStatus(k, "done"); }
         else { run.errors[k] = j.error || "Erreur"; setStatus(k, "err", "échec"); if (/bilans du jour|quota/i.test(j.error || "")) { toast(j.error, true); } }
@@ -1777,11 +1912,13 @@ var PERSO = (function () {
     $("home-grid").addEventListener("click", function (e) {
       var add = e.target.closest("#g-add"); if (add) { addGoal(); return; }
       var rm = e.target.closest(".goal .rm"); if (rm) { var id = rm.closest(".goal").dataset.id; S.goals = S.goals.filter(function (g) { return g.id !== id; }); saveNow(); renderHome(); return; }
+      if (e.target.id === "tip-next") { S.tipOffset = (S.tipOffset || 0) + 1; $("tip-txt").textContent = PERSO.tipOfWeek(S.tipOffset); return; }
+      if (e.target.id === "btn-ics") { icsReminder(); return; }
       var sub = e.target.closest("button[data-sub]"); if (sub) { var k = sub.dataset.sub; if (S.cancelled[k]) delete S.cancelled[k]; else S.cancelled[k] = { montant: toNum(sub.dataset.m), date: new Date().toISOString() }; saveNow(); renderHome(); return; }
     });
     $("home-grid").addEventListener("change", function (e) {
       var sel = e.target.closest("#coussin-sel"); if (sel) { S.coussin = toNum(sel.value); saveNow(); renderHome(); return; }
-      var c = e.target.closest("input[data-check]"); if (c) { S.checks[c.dataset.check] = c.checked; saveNow(); setTimeout(renderHome, 350); return; }
+      var c = e.target.closest("input[data-check]"); if (c) { setCheck(c.dataset.check, c.checked); saveNow(); setTimeout(renderHome, 350); return; }
     });
     $("home-grid").addEventListener("input", debounce(function (e) {
       var inp = e.target.closest(".g-deja"); if (!inp) return;
@@ -1821,7 +1958,7 @@ var PERSO = (function () {
     $("tabs").addEventListener("click", function (e) { var b = e.target.closest("button"); if (b) selectTab(b.dataset.k); });
     $("res-body").addEventListener("change", function (e) {
       var c = e.target.closest("input[data-check]"); if (!c) return;
-      S.checks[c.dataset.check] = c.checked; c.closest(".check").classList.toggle("on", c.checked); save();
+      setCheck(c.dataset.check, c.checked); c.closest(".check").classList.toggle("on", c.checked); save();
     });
     $("btn-print").addEventListener("click", function () { window.print(); });
     $("btn-again").addEventListener("click", function () { if (S.view) { S.etat = JSON.parse(JSON.stringify(S.view.etat)); S.rawText = S.rawText || ""; } renderRead(); show("read"); });
@@ -1831,7 +1968,7 @@ var PERSO = (function () {
     window.addEventListener("afterprint", function () { var on = document.querySelector("#tabs button.on"); if (on && !$("tabs").hidden) selectTab(on.dataset.k); });
   }
   function toggleMod(k) {
-    if (k === "all") { var all = PERSO.MENU.every(function (x) { return S.sel[x]; }); PERSO.MENU.forEach(function (x) { S.sel[x] = !all; }); }
+    if (k === "all") { var all = PERSO.MENU.every(function (x) { return S.sel[x]; }); PERSO.MENU.forEach(function (x) { S.sel[x] = !all; }); if (!all && suiviDispo()) S.sel.suivi = true; }
     else S.sel[k] = !S.sel[k];
     renderMods();
   }
@@ -1844,7 +1981,7 @@ var PERSO = (function () {
     if (d && typeof d === "object") {
       S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.email = d.email || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
       S.text = d.text || ""; S.form = d.form || { dettes: [], cats: {} }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
-      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3;
+      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {};
       $("txt").value = S.text; fillForm(); fillCtx();
     }
     setMode(S.mode); setClient(); setGateMode("account");

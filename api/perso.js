@@ -98,7 +98,12 @@ Voici les dettes de la personne (crédits conso, crédit renouvelable, crédit a
 Interdits : recommander un rachat ou un regroupement de crédits, un nouveau crédit, un organisme ou un courtier. Si les mensualités dépassent un tiers des revenus ou si un crédit renouvelable sert à payer le quotidien, dis clairement qu'un rendez-vous gratuit avec un Point Conseil Budget s'impose, et rappelle l'existence de la procédure de surendettement de la Banque de France si la situation est bloquée.
 Si aucune dette n'apparaît dans les données, dis-le clairement, concentre-toi sur la prévention (découvert, paiements en plusieurs fois, réserve d'imprévus) et précise ce qu'il faudrait fournir.
 Remplis : kpis (total des dettes, mensualités et part des revenus, coût annuel des intérêts, mois avant libération), dettes (chacune avec priorite et action), strategie_dettes, diagnostic (risques : découvert, taux élevés, échéances proches), plan_90_jours (appels, renégociations, mises en place), hypotheses, questions, mot_du_daf.
-Laisse vides : score, fuites, opportunites, allocation, feuille_de_route, automatisations.`
+Laisse vides : score, fuites, opportunites, allocation, feuille_de_route, automatisations.`,
+
+  suivi: `Analyse demandée : 06 · BILAN DU MOIS (suivi).
+Tu as le bilan précédent de la personne (situation, score, plan d'actions avec ce qu'elle a coché comme fait) et sa situation d'aujourd'hui. Fais le point comme un coach qui revoit son client chaque mois : commence par ce qui a avancé, chiffre les progrès (reste chaque mois, dépenses, épargne de sécurité, dettes, abonnements), reconnais explicitement les actions validées et leur effet visible dans les chiffres, puis regarde sans jugement les actions restées en attente et propose pour chacune un moyen plus simple ou une raison de la laisser tomber. Recalcule le score Phénix (global et cinq axes : budget, epargne, depenses, dettes, securite) de façon cohérente avec le score précédent : il ne doit bouger que si les chiffres bougent. Donne un défi unique pour le mois qui vient, précis et chiffré, à la portée de la personne. Termine par le plan du mois : 4 à 6 actions datées S1 à S4 (semaines du mois qui vient), en reprenant les actions en attente qui valent encore le coup et en ajoutant ce que la nouvelle situation réclame.
+Remplis : score, progres (4 à 6 indicateurs avec avant, après, tendance et un commentaire d'une phrase), actions_validees (chacune avec son effet), actions_en_attente (chacune avec un conseil), defi_du_mois, kpis (3 à 4), diagnostic (2 à 4 constats du mois), plan_90_jours (S1 à S4), hypotheses, questions, mot_du_daf (chaleureux, tourné vers le mois qui vient).
+Laisse vides : fuites, opportunites, allocation, dettes, strategie_dettes, feuille_de_route, automatisations.`
 };
 
 // ---------------------------------------------------------------------------
@@ -143,6 +148,10 @@ const RAPPORT_SCHEMA = obj({
   feuille_de_route: arr(obj({ horizon: S, objectif: S, actions: arr(S), indicateur: S })),
   automatisations: arr(obj({ quoi: S, comment: S, frequence: S })),
   plan_90_jours: arr(obj({ semaine: { type: "string", description: "S1 à S12" }, action: S, impact: S, difficulte: { type: "string", enum: ["facile", "moyen", "dur"] } })),
+  progres: arr(obj({ indicateur: S, avant: { type: "string", description: "valeur formatée au bilan précédent" }, apres: { type: "string", description: "valeur formatée aujourd'hui" }, tendance: { type: "string", enum: ["mieux", "stable", "moins_bien"] }, commentaire: S })),
+  actions_validees: arr(obj({ action: S, effet: S })),
+  actions_en_attente: arr(obj({ action: S, conseil: S })),
+  defi_du_mois: obj({ titre: S, detail: S, gain_estime: S }),
   hypotheses: arr(S),
   questions: arr(S),
   mot_du_daf: { type: "string", description: "2 à 3 lignes, le mot de la fin du directeur financier personnel" }
@@ -157,7 +166,8 @@ const RAPPORT_SECTIONS = {
   plan:   ["opportunites", "feuille_de_route"],
   treso:  ["allocation", "automatisations", "fuites"],
   fuites: ["fuites"],
-  dettes: ["dettes", "strategie_dettes"]
+  dettes: ["dettes", "strategie_dettes"],
+  suivi:  ["score", "progres", "actions_validees", "actions_en_attente", "defi_du_mois"]
 };
 function schemaRapport(mod) {
   const garde = RAPPORT_COMMUN.concat(RAPPORT_SECTIONS[mod] || []);
@@ -252,6 +262,13 @@ function ctxText(ctx) {
   return lines.length ? lines.join("\n") : "(aucun contexte fourni)";
 }
 
+// Bilan précédent transmis par l'outil pour le suivi : situation, score, plan avec ce qui a été coché.
+function precedentText(p) {
+  if (!p || typeof p !== "object" || !p.etat) return "";
+  const actions = Array.isArray(p.actions) ? p.actions.slice(0, 40).map(function (a) { return "- [" + (a.fait ? "FAIT" : "pas fait") + "] " + String(a.semaine || "").slice(0, 4) + " " + String(a.action || "").slice(0, 200) + (a.fait_le ? " (coché le " + String(a.fait_le).slice(0, 10) + ")" : ""); }).join("\n") : "";
+  return "\n\nBilan précédent du " + String(p.date || "").slice(0, 10) + (p.score ? " (score Phénix " + parseInt(p.score, 10) + "/100)" : "") + " :\n" + JSON.stringify(p.etat).slice(0, 60000) + (actions ? "\n\nPlan d'actions du bilan précédent et ce que la personne a coché :\n" + actions : "") + (p.libere ? "\nAbonnements résiliés depuis, déclarés par la personne : " + String(p.libere).slice(0, 500) : "");
+}
+
 async function lecture(body) {
   const text = String(body.text || "").slice(0, MAX_TEXT);
   const blocks = core.fileBlocks(body.files);
@@ -266,7 +283,9 @@ async function analyse(body) {
   if (!body.etat || typeof body.etat !== "object") throw new Error("Situation financière manquante.");
   const etatJson = JSON.stringify(body.etat).slice(0, 120000);
   const raw = String(body.text || "").slice(0, RAW_EXCERPT);
-  const data = "Contexte de la personne :\n" + ctxText(body.context) + "\n\nSituation financière reconstituée (JSON, vérifiée par la personne) :\n" + etatJson + (raw.trim() ? "\n\nExtrait des données brutes, pour retrouver les libellés exacts :\n<<<\n" + raw + "\n>>>" : "");
+  const prev = precedentText(body.precedent);
+  if (mod === "suivi" && !prev) throw new Error("Le bilan du mois compare avec un bilan précédent : fais d'abord un premier bilan.");
+  const data = "Contexte de la personne :\n" + ctxText(body.context) + "\n\nSituation financière reconstituée aujourd'hui (JSON, vérifiée par la personne) :\n" + etatJson + prev + (raw.trim() ? "\n\nExtrait des données brutes, pour retrouver les libellés exacts :\n<<<\n" + raw + "\n>>>" : "");
   const content = [
     { type: "text", text: data, cache_control: { type: "ephemeral" } },
     { type: "text", text: MODULE_PROMPTS[mod] }
@@ -338,4 +357,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };
+module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, precedentText: precedentText, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };
