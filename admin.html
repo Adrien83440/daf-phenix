@@ -706,6 +706,8 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     var rows = [
       ["ANTHROPIC_API_KEY", c.configured.api, "clé API Anthropic"], ["DAF_ACCESS_SECRET", c.configured.secret, "signe tous les codes : ne jamais le changer"], ["DAF_ADMIN_KEY", c.configured.admin, "clé de secours de la console et appels serveur (Make)"], ["DAF_ADMINS", !!c.configured.admins, "comptes e-mail + mot de passe (npm run admin:hash)"], ["DAF_SESSION_SECRET", !!c.configured.sessionSecret, "signe les sessions (facultatif, sinon DAF_ACCESS_SECRET)"], ["DAF_BRIDGE_KEY", c.configured.bridge, "pont Academy (facultatif)"],
       ["KV_REST_API_URL / KV_REST_API_TOKEN", st.backend === "kv", "Upstash Redis via le marketplace Vercel (facultatif, recommandé), préfixe indifférent"],
+      ["ELEVENLABS_API_KEY ou OPENAI_API_KEY", c.voix ? c.voix : "", "voix naturelle de Phénix en direct (sinon voix du navigateur)"],
+      ["PERSO_VOCAL_MODEL", c.vocalModel || "", "modèle de la conversation en direct"],
       ["DAF_REVOKED", c.revokedEnv.pro.length ? c.revokedEnv.pro.join(", ") : "", "identifiants Pro révoqués par variable"], ["PERSO_REVOKED", c.revokedEnv.perso.length ? c.revokedEnv.perso.join(", ") : "", "identifiants Perso révoqués par variable"],
       ["DAF_ACCESS_CODES", c.staticCodes.pro.length ? c.staticCodes.pro.join(", ") : "", "codes fixes Pro"], ["PERSO_ACCESS_CODES", c.staticCodes.perso.length ? c.staticCodes.perso.join(", ") : "", "codes fixes Perso"]
     ];

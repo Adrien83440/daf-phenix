@@ -260,8 +260,11 @@ function callClaude(content, schema, maxTokens, system, effort) {
   return callClaudeMessages([{ role: "user", content: content }], schema, maxTokens, system, effort);
 }
 // Même appel, avec un fil de messages (conversation) au lieu d'un seul tour.
-async function callClaudeMessages(messages, schema, maxTokens, system, effort) {
+async function callClaudeMessages(messages, schema, maxTokens, system, effort, model) {
   if (!API_KEY) throw new Error("ANTHROPIC_API_KEY manquante côté serveur.");
+  model = model || MODEL;
+  const outputConfig = { format: { type: "json_schema", schema: schema } };
+  if (!/haiku/i.test(model)) outputConfig.effort = effort || EFFORT;   // le réglage d'effort n'existe pas sur Haiku
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, 285000);
   let r, j;
@@ -270,11 +273,11 @@ async function callClaudeMessages(messages, schema, maxTokens, system, effort) {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": API_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({
-        model: MODEL,
+        model: model,
         max_tokens: maxTokens,
         system: [{ type: "text", text: system || SYSTEM, cache_control: { type: "ephemeral" } }],
         messages: messages,
-        output_config: { effort: effort || EFFORT, format: { type: "json_schema", schema: schema } }
+        output_config: outputConfig
       }),
       signal: ctrl.signal
     });

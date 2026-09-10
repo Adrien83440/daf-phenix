@@ -25,6 +25,7 @@ const perso = require("./perso.js");
 const store = require("../lib/store.js");
 const auth = require("../lib/auth.js");
 const accounts = require("../lib/accounts.js");
+const voix = require("../lib/voix.js");
 const P = pro._internal, X = perso._internal;
 
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
@@ -123,7 +124,7 @@ async function overview() {
     config: {
       model: P.MODEL, effort: P.EFFORT, quotaPro: P.QUOTA, quotaPerso: X.QUOTA,
       configured: { api: !!process.env.ANTHROPIC_API_KEY, secret: !!process.env.DAF_ACCESS_SECRET, admin: !!ADMIN_KEY, bridge: !!process.env.DAF_BRIDGE_KEY, admins: Object.keys(auth.envAdmins()).length, sessionSecret: !!process.env.DAF_SESSION_SECRET },
-      store: await store.ping(), prices: { in: PRICE_IN, out: PRICE_OUT }, accounts: accounts.canPersist(),
+      store: await store.ping(), prices: { in: PRICE_IN, out: PRICE_OUT }, accounts: accounts.canPersist(), voix: voix.label(), vocalModel: X.VOCAL_MODEL,
       revokedEnv: { pro: envList("DAF_REVOKED"), perso: envList("PERSO_REVOKED") },
       staticCodes: { pro: envList("DAF_ACCESS_CODES").map(function (s) { return s.split(":")[0]; }), perso: envList("PERSO_ACCESS_CODES").map(function (s) { return s.split(":")[0]; }) },
       region: process.env.VERCEL_REGION || "", env: process.env.VERCEL_ENV || "local"

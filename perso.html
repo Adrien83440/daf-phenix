@@ -1324,7 +1324,7 @@ var PERSO = (function () {
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
     etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {}, checksAt: {},
     goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home", situReturn: "home",
-    premium: false, vocal: { turns: [] }, actionsPerso: []
+    premium: false, voix: false, vocal: { turns: [] }, actionsPerso: []
   };
   var FIELDS = [
     ["revenus_mensuels", "Revenus nets / mois"], ["epargne_mensuelle", "Mis de côté / mois"], ["epargne_disponible", "Épargne disponible"],
@@ -1405,7 +1405,7 @@ var PERSO = (function () {
       api({ action: "verify" }).then(function (j) {
         b.disabled = false;
         if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
-        S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota; S.email = ""; S.premium = !!j.premium;
+        S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota; S.email = ""; S.premium = !!j.premium; S.voix = !!j.voix;
         afterGate();
       });
       return;
@@ -1416,9 +1416,9 @@ var PERSO = (function () {
     api({ action: "login", email: email, password: pw }).then(function (j) {
       b.disabled = false;
       if (!j.ok) { $("gate-err").textContent = j.error || "Connexion refusée."; return; }
-      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.email = j.email || email; S.premium = !!j.premium;
+      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.email = j.email || email; S.premium = !!j.premium; S.voix = !!j.voix;
       $("g-pw").value = "";
-      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; S.premium = !!v.premium; renderMods(); } });
+      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; S.premium = !!v.premium; S.voix = !!v.voix; renderMods(); } });
       if (j.mustChange) { S.tmpPw = pw; $("p-current-wrap").hidden = true; show("pass"); return; }
       afterGate();
     });
@@ -2033,7 +2033,7 @@ var PERSO = (function () {
     $("btn-home").addEventListener("click", goHome);
     $("btn-live").addEventListener("click", jvOpen);
     $("jv-close").addEventListener("click", jvClose);
-    $("jv-mic").addEventListener("click", function () { if (JV.state === "listening") jvStopListen(); else if (JV.state === "idle") { JV.textMode = false; $("jv-type").hidden = true; $("jv-toggle-type").textContent = "Écrire à la place"; jvListen(); } else if (JV.state === "speaking" && TTS) { TTS.cancel(); } });
+    $("jv-mic").addEventListener("click", function () { if (JV.state === "listening") jvStopListen(); else if (JV.state === "idle") { JV.textMode = false; $("jv-type").hidden = true; $("jv-toggle-type").textContent = "Écrire à la place"; jvListen(); } else if (JV.state === "speaking") { JVA.seq++; if (JVA.el) { try { JVA.el.pause(); } catch (e) {} } if (TTS) TTS.cancel(); JV.target = 0; jvSetState("idle", "Appuie et parle"); } });
     $("jv-toggle-type").addEventListener("click", function () { jvTextMode(!JV.textMode); });
     $("jv-send").addEventListener("click", function () { var t = $("jv-input").value.trim(); if (!t) return; $("jv-input").value = ""; JV.byVoice = false; jvSend(t); });
     $("jv-input").addEventListener("keydown", function (e) { if (e.key === "Enter") $("jv-send").click(); });
@@ -2131,7 +2131,7 @@ var PERSO = (function () {
     jvStart(); jvSpeak(greet, function () { if (SR && !JV.textMode) jvListen(); });
   }
   function jvClose() {
-    JV.open = false; jvStopListen(); if (TTS) TTS.cancel(); jvStop();
+    JV.open = false; jvStopListen(); if (TTS) TTS.cancel(); JVA.seq++; if (JVA.el) { try { JVA.el.pause(); } catch (e) {} } jvStop();
     $("jarvis").hidden = true; renderHome();
   }
   function jvTextMode(on) {
@@ -2169,7 +2169,44 @@ var PERSO = (function () {
     try { JV.rec.start(); jvSetState("listening", "Je t'écoute… appuie pour arrêter"); } catch (e) { jvSetState("idle", "Appuie et parle"); }
   }
   function jvStopListen() { if (JV.rec) { try { JV.rec.stop(); } catch (e) {} } }
+  var JVA = { el: null, ctx: null, analyser: null, src: null, seq: 0 };
+  function jvAudioLevel() {
+    if (!JVA.analyser) return 0;
+    var buf = new Uint8Array(JVA.analyser.fftSize); JVA.analyser.getByteTimeDomainData(buf);
+    var sum = 0; for (var i = 0; i < buf.length; i++) { var v = (buf[i] - 128) / 128; sum += v * v; }
+    return Math.min(1, Math.sqrt(sum / buf.length) * 3.2);
+  }
+  // Voix naturelle servie par la fonction (ElevenLabs ou OpenAI) : le son passe par un analyseur, l'orbe suit la vraie voix.
+  function jvSpeakServer(text, done) {
+    var seq = ++JVA.seq;
+    var finish = function () { if (seq !== JVA.seq) return; JV.target = 0; JVA.playing = false; if (JV.open) jvSetState("idle", SR && !JV.textMode ? "Appuie et parle" : ""); if (done) done(); };
+    var fallback = function () { if (seq !== JVA.seq) return; JVA.playing = false; jvSpeakBrowser(text, done); };
+    fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "voix", code: S.code, text: text }) })
+      .then(function (r) { if (!r.ok || !/audio/.test(r.headers.get("content-type") || "")) throw new Error("voix indisponible"); return r.blob(); })
+      .then(function (blob) {
+        if (seq !== JVA.seq || !JV.open) return;
+        if (!JVA.el) { JVA.el = new Audio(); JVA.el.preload = "auto"; }
+        var el = JVA.el; if (el.src) { try { URL.revokeObjectURL(el.src); } catch (e) {} }
+        el.src = URL.createObjectURL(blob);
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (AC && !JVA.ctx) { JVA.ctx = new AC(); JVA.src = JVA.ctx.createMediaElementSource(el); JVA.analyser = JVA.ctx.createAnalyser(); JVA.analyser.fftSize = 512; JVA.src.connect(JVA.analyser); JVA.analyser.connect(JVA.ctx.destination); }
+          if (JVA.ctx && JVA.ctx.state === "suspended") JVA.ctx.resume();
+        } catch (e) { /* pas d'analyse : l'orbe suivra une modulation synthétique */ }
+        el.onended = finish; el.onerror = fallback;
+        JVA.playing = true; jvSetState("speaking", ""); JV.target = 0.6;
+        var p = el.play();
+        if (!p || !p.then) { fallback(); return; }
+        p.catch(fallback);
+      })
+      .catch(fallback);
+  }
   function jvSpeak(text, done) {
+    if (JVA.el) { try { JVA.el.pause(); } catch (e) {} }
+    if (S.voix && text) { jvSpeakServer(text, done); return; }
+    jvSpeakBrowser(text, done);
+  }
+  function jvSpeakBrowser(text, done) {
     if (!TTS || !text) { if (JV.open) jvSetState("idle", SR && !JV.textMode ? "Appuie et parle" : ""); if (done) done(); return; }
     TTS.cancel();
     var u = new SpeechSynthesisUtterance(text); u.lang = "fr-FR"; u.rate = 1; u.pitch = 0.9;
@@ -2183,7 +2220,7 @@ var PERSO = (function () {
   function jvSend(text) {
     text = String(text || "").trim(); if (!text || JV.state === "thinking") return;
     $("jv-said").textContent = text; $("jv-change").hidden = true; $("jv-action").hidden = true;
-    jvSetState("thinking", "");
+    jvSetState("thinking", "Un instant…");
     S.vocal.turns.push({ role: "user", texte: text, t: new Date().toISOString() });
     var run = lastRun(), plan = run ? planItems(run).concat(persoItems(cycle(run))).map(function (x) { return { action: x.p.action, fait: !!S.checks[x.id] }; }) : [];
     api({ action: "vocal", turnId: uid(), message: text, tours: S.vocal.turns.slice(-9, -1), context: S.ctx, etat: run ? run.etat : null, plan: plan }).then(function (j) {
@@ -2225,7 +2262,7 @@ var PERSO = (function () {
       if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
       JV.t += reduce ? 0.004 : 0.016;
-      var lv = JV.state === "listening" ? jvReadLevel() : JV.state === "thinking" ? 0.25 + 0.15 * Math.sin(JV.t * 2.2) : JV.state === "speaking" ? JV.target * (0.5 + 0.5 * Math.abs(Math.sin(JV.t * 7))) : 0.06 + 0.04 * Math.sin(JV.t);
+      var lv = JV.state === "listening" ? jvReadLevel() : JV.state === "thinking" ? 0.25 + 0.15 * Math.sin(JV.t * 2.2) : JV.state === "speaking" ? (JVA.playing && JVA.analyser ? jvAudioLevel() : JV.target * (0.5 + 0.5 * Math.abs(Math.sin(JV.t * 7)))) : 0.06 + 0.04 * Math.sin(JV.t);
       JV.level += ((Math.max(lv, JV.level * 0.86)) - JV.level) * 0.35;
       var cx = w / 2, cy = Math.min(h * 0.42, h - 300), R = Math.min(w, h) * 0.17;
       var col = JV.state === "thinking" ? [201, 179, 240] : JV.state === "speaking" ? [232, 114, 44] : [243, 207, 122];
@@ -2288,7 +2325,7 @@ var PERSO = (function () {
     if (S.code) {
       if (S.consentAt) goHome(); else show("consent");
       api({ action: "verify" }).then(function (j) {
-        if (j.ok) { S.label = j.label || S.label; S.expires = j.expires || ""; S.product = j.product || S.product; S.quota = j.quota || S.quota; S.premium = !!j.premium; setClient(); renderMods(); save(); if ($("s-home").classList.contains("on")) renderHome(); }
+        if (j.ok) { S.label = j.label || S.label; S.expires = j.expires || ""; S.product = j.product || S.product; S.quota = j.quota || S.quota; S.premium = !!j.premium; S.voix = !!j.voix; setClient(); renderMods(); save(); if ($("s-home").classList.contains("on")) renderHome(); }
         else if (j.error && !/Connexion/.test(j.error)) { S.code = ""; setClient(); saveNow(); $("gate-err").textContent = j.error; show("gate"); }
       });
     } else show("gate");

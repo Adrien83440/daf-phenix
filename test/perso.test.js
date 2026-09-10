@@ -231,7 +231,8 @@ test("Phénix en direct : réservé au premium, conversation multi-tours, situat
   r = await call({ action: "vocal", code: code, turnId: "T1", message: "Je viens de changer de travail, je gagne 2 400 maintenant.", tours: [{ role: "user", texte: "Salut" }, { role: "assistant", texte: "Salut Sam, je t'écoute." }], context: { prenom: "Sam", situation_texte: "Au chômage, 1 300 €." }, etat: { revenus_mensuels: 1300 }, plan: [{ action: "Résilier la salle", fait: true }] });
   assert.equal(r.status, 200, JSON.stringify(r.json));
   assert.equal(r.json.result.situation_maj, "Je viens de changer de travail, 2 400 € net.");
-  assert.equal(lastRequest.output_config.effort, "low"); assert.equal(lastRequest.max_tokens, 1200);
+  assert.equal(lastRequest.model, "claude-haiku-4-5-20251001", "la conversation tourne sur un modèle rapide");
+  assert.equal(lastRequest.output_config.effort, undefined, "pas de réglage d'effort sur Haiku"); assert.equal(lastRequest.max_tokens, 1200);
   assert.deepEqual(lastRequest.output_config.format.schema, P.VOCAL_SCHEMA);
   const msgs = lastRequest.messages;
   assert.equal(msgs.length, 5, "fond + accusé + 2 tours + message");
@@ -245,6 +246,50 @@ test("Phénix en direct : réservé au premium, conversation multi-tours, situat
   assert.equal(r.status, 500); assert.match(r.json.error, /rien entendu/);
   // le quota des bilans n'est pas touché par la conversation
   assert.deepEqual((await call({ action: "verify", code: code })).json.quota, { used: 0, limit: 2 });
+});
+
+test("voix naturelle : fournisseur selon la clé, audio renvoyé, repli annoncé", async function () {
+  const voix = require("../lib/voix.js");
+  const store = require("../lib/store.js");
+  assert.equal(voix.provider(), "", "sans clé : voix du navigateur");
+  assert.equal((await call({ action: "ping" })).json.voix, "");
+  const code = P.mintCode("Voix", 1).code;
+  await store.saveClient({ code: code, product: "perso", tag: "VOIX", premium: true });
+  let r = await call({ action: "voix", code: code, text: "Bonjour" });
+  assert.equal(r.status, 500); assert.match(r.json.error, /Aucune voix configurée/);
+
+  process.env.OPENAI_API_KEY = "sk-test"; process.env.OPENAI_TTS_VOICE = "coral";
+  assert.equal(voix.provider(), "openai");
+  assert.equal((await call({ action: "verify", code: code })).json.voix, true);
+  const saved = global.fetch;
+  let audioReq = null;
+  global.fetch = async function (url, opts) {
+    if (/openai\.com\/v1\/audio\/speech/.test(url)) { audioReq = { url: url, body: JSON.parse(opts.body), auth: opts.headers.authorization }; return { ok: true, arrayBuffer: async () => new Uint8Array([73, 68, 51, 4, 0]).buffer }; }
+    return saved(url, opts);
+  };
+  const res = await new Promise(function (resolve) {
+    const out = { headers: {}, statusCode: 200, setHeader(k, v) { this.headers[k] = v; }, status(c) { this.statusCode = c; return this; }, end(b) { resolve({ status: this.statusCode, headers: this.headers, body: b }); } };
+    perso({ method: "POST", body: { action: "voix", code: code, text: "Bravo pour le nouveau poste." }, headers: { "x-forwarded-for": "10.0.9.9" }, socket: {} }, out);
+  });
+  assert.equal(res.status, 200); assert.equal(res.headers["Content-Type"], "audio/mpeg"); assert.equal(res.body.length, 5);
+  assert.equal(audioReq.body.voice, "coral"); assert.equal(audioReq.body.model, "gpt-4o-mini-tts"); assert.equal(audioReq.auth, "Bearer sk-test");
+  assert.match(audioReq.body.instructions, /français/);
+
+  process.env.ELEVENLABS_API_KEY = "el-test"; process.env.ELEVENLABS_VOICE_ID = "VOIX123";
+  assert.equal(voix.provider(), "elevenlabs", "ElevenLabs prime quand les deux clés existent");
+  global.fetch = async function (url, opts) {
+    if (/elevenlabs\.io\/v1\/text-to-speech\/VOIX123/.test(url)) { audioReq = { body: JSON.parse(opts.body), key: opts.headers["xi-api-key"] }; return { ok: true, arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer }; }
+    if (/elevenlabs/.test(url)) return { ok: false, status: 401, text: async () => "bad key" };
+    return saved(url, opts);
+  };
+  const el = await voix.synthese("Salut Sam.");
+  assert.equal(el.audio.length, 3); assert.equal(audioReq.key, "el-test"); assert.equal(audioReq.body.model_id, "eleven_flash_v2_5"); assert.equal(audioReq.body.language_code, "fr");
+  // sans premium : refus
+  await store.saveClient({ code: code, product: "perso", tag: "VOIX", premium: false });
+  r = await call({ action: "voix", code: code, text: "x" });
+  assert.equal(r.status, 403);
+  delete process.env.ELEVENLABS_API_KEY; delete process.env.ELEVENLABS_VOICE_ID; delete process.env.OPENAI_API_KEY; delete process.env.OPENAI_TTS_VOICE;
+  global.fetch = saved;
 });
 
 test("refus et réponse illisible de l'IA remontent en erreur lisible", async function () {

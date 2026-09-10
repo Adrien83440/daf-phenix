@@ -12,6 +12,8 @@
 //    PERSO_REVOKED        identifiants de codes Perso désactivés : "DUPONT,MARTIN"
 //    PERSO_VOCAL_QUOTA    tours de conversation vocale par jour et par compte (défaut : 40)
 //    PERSO_VOCAL_POUR_TOUS "1" pour ouvrir l'assistant vocal à tous les comptes (sinon fiche client premium)
+//    PERSO_VOCAL_MODEL    modèle de la conversation (défaut : claude-haiku-4-5-20251001, rapide)
+//    ELEVENLABS_API_KEY ou OPENAI_API_KEY : voix naturelle (voir lib/voix.js) ; sinon voix du navigateur
 //
 //  Codes : "PXP-TAG-AAMM-SIGNATURE" (signés avec DAF_ACCESS_SECRET, espace de
 //  signature distinct des codes Pro). Un code Pro (PHX-…) valide est aussi
@@ -20,6 +22,7 @@
 //  Actions (POST JSON) : verify | lecture | analyse | mint (admin) | ping
 //                        login | password (comptes e-mail + mot de passe, voir lib/accounts.js)
 //                        vocal (assistant conversationnel « Phénix en direct », Premium)
+//                        voix (synthèse vocale : renvoie l'audio MP3, Premium)
 //
 //  RGPD : la fonction ne journalise ni ne conserve les données reçues ; elles
 //  transitent vers l'API Anthropic le temps du calcul (voir CONFORMITE-PERSO.md).
@@ -28,10 +31,12 @@
 const core = require("./daf.js")._internal;
 const store = require("../lib/store.js");
 const accounts = require("../lib/accounts.js");
+const voix = require("../lib/voix.js");
 
 const QUOTA = Math.max(1, parseInt(process.env.PERSO_DAILY_QUOTA || "5", 10) || 5);
 const VOCAL_QUOTA = Math.max(1, parseInt(process.env.PERSO_VOCAL_QUOTA || "40", 10) || 40);   // tours de conversation par jour
 const VOCAL_POUR_TOUS = process.env.PERSO_VOCAL_POUR_TOUS === "1";                            // ouvre l'assistant sans Premium (tests, lancement)
+const VOCAL_MODEL = process.env.PERSO_VOCAL_MODEL || "claude-haiku-4-5-20251001";              // conversation : un modèle rapide suffit
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
@@ -327,7 +332,7 @@ async function vocal(body) {
   const plan = Array.isArray(body.plan) ? body.plan.slice(0, 12).map(function (a) { return "- [" + (a.fait ? "fait" : "à faire") + "] " + String(a.action || "").slice(0, 160); }).join("\n") : "";
   const fond = "Contexte de la personne :\n" + ctxText(body.context) + (etat ? "\n\nSa situation chiffrée au dernier bilan (JSON) :\n" + JSON.stringify(etat).slice(0, 12000) : "\n\n(Pas encore de bilan chiffré.)") + (plan ? "\n\nSon plan d'actions en cours :\n" + plan : "");
   const messages = [{ role: "user", content: [{ type: "text", text: fond, cache_control: { type: "ephemeral" } }, { type: "text", text: VOCAL_PROMPT + "\n\nLa conversation commence." }] }, { role: "assistant", content: "D'accord, je t'écoute." }].concat(tours, [{ role: "user", content: message }]);
-  const out = await core.callClaudeMessages(messages, VOCAL_SCHEMA, 1200, SYSTEM, "low");
+  const out = await core.callClaudeMessages(messages, VOCAL_SCHEMA, 1200, SYSTEM, "low", VOCAL_MODEL);
   return out;
 }
 
@@ -356,8 +361,8 @@ module.exports = async function handler(req, res) {
   if (core.rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
 
   try {
-    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist(), vocalPourTous: VOCAL_POUR_TOUS }); return; }
-    if (action === "login") { const r = await accounts.login(body, ip, checkCode); if (r.out.ok) r.out.premium = isPremium(await store.getClient(r.out.code)); send(res, r.status, r.out); return; }
+    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist(), vocalPourTous: VOCAL_POUR_TOUS, voix: voix.label(), vocalModel: VOCAL_MODEL }); return; }
+    if (action === "login") { const r = await accounts.login(body, ip, checkCode); if (r.out.ok) { r.out.premium = isPremium(await store.getClient(r.out.code)); r.out.voix = !!voix.provider(); } send(res, r.status, r.out); return; }
     if (action === "password") { const r = await accounts.changePassword(body, ip); send(res, r.status, r.out); return; }
 
     if (action === "mint") {
@@ -376,7 +381,16 @@ module.exports = async function handler(req, res) {
     const limit = await quotaLimit(access.code, rec);
 
     if (action === "verify") {
-      send(res, 200, { ok: true, label: access.label, expires: access.expires, product: access.product, premium: isPremium(rec), quota: { used: await store.quotaUsed(access.code), limit: limit } });
+      send(res, 200, { ok: true, label: access.label, expires: access.expires, product: access.product, premium: isPremium(rec), voix: !!voix.provider(), quota: { used: await store.quotaUsed(access.code), limit: limit } });
+      return;
+    }
+
+    if (action === "voix") {
+      if (!isPremium(rec)) { send(res, 403, { ok: false, error: "Phénix en direct fait partie de l'offre Premium." }); return; }
+      const out = await voix.synthese(body.text);
+      res.setHeader("Content-Type", out.type);
+      res.setHeader("Content-Length", String(out.audio.length));
+      res.status(200).end(out.audio);
       return;
     }
 
@@ -404,4 +418,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, precedentText: precedentText, isPremium: isPremium, VOCAL_SCHEMA: VOCAL_SCHEMA, VOCAL_PROMPT: VOCAL_PROMPT, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };
+module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, precedentText: precedentText, isPremium: isPremium, VOCAL_MODEL: VOCAL_MODEL, VOCAL_SCHEMA: VOCAL_SCHEMA, VOCAL_PROMPT: VOCAL_PROMPT, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };
