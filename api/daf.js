@@ -15,11 +15,14 @@
 //    DAF_ALLOW_ORIGIN    origine autorisée en CORS (défaut : *)
 //    DAF_BRIDGE_KEY      clé partagée avec l'Academy : les requêtes portant ce secret (en-tête x-daf-bridge)
 //                        sautent le code d'accès, le quota et la limite IP (l'Academy gère l'accès et le quota)
+//    KV_REST_API_URL / KV_REST_API_TOKEN   (facultatif) Vercel KV ou Upstash : clients, révocations, quotas
+//                        et activité conservés entre les redémarrages (voir lib/store.js et api/admin.js)
 //
 //  Actions (POST JSON) : verify | lecture | analyse | mint (admin) | ping
 // ============================================================================
 "use strict";
 const crypto = require("crypto");
+const store = require("../lib/store.js");
 
 const MODEL = process.env.DAF_MODEL || "claude-sonnet-5";
 const EFFORT = ["low", "medium", "high"].indexOf(process.env.DAF_EFFORT) > -1 ? process.env.DAF_EFFORT : "medium";
@@ -226,23 +229,13 @@ function checkCode(raw) {
 }
 
 // ---------------------------------------------------------------------------
-//  Quotas et limitation (mémoire de l'instance : protection souple)
+//  Quotas (lib/store.js : Vercel KV si configuré, sinon mémoire d'instance)
+//  et limitation par IP (mémoire d'instance : protection souple)
 // ---------------------------------------------------------------------------
-const usage = new Map();   // code -> { day, runs:Set }
 const hits = new Map();    // ip -> [timestamps]
-function today() { return new Date().toISOString().slice(0, 10); }
-function quotaState(code) {
-  const d = today();
-  let u = usage.get(code);
-  if (!u || u.day !== d) { u = { day: d, runs: new Set() }; usage.set(code, u); }
-  return u;
-}
-function consumeRun(code, runId) {
-  const u = quotaState(code);
-  if (runId && u.runs.has(runId)) return { ok: true, used: u.runs.size, limit: QUOTA };
-  if (u.runs.size >= QUOTA) return { ok: false, used: u.runs.size, limit: QUOTA };
-  u.runs.add(runId || crypto.randomUUID());
-  return { ok: true, used: u.runs.size, limit: QUOTA };
+async function quotaLimit(code) {
+  const c = await store.getClient(code);
+  return c && parseInt(c.quota, 10) > 0 ? parseInt(c.quota, 10) : QUOTA;
 }
 function rateLimited(ip) {
   const now = Date.now();
@@ -367,7 +360,8 @@ module.exports = async function handler(req, res) {
       // Accès délégué à l'Academy : elle a déjà authentifié l'apprenant et compté son quota.
       if (action === "verify") { send(res, 200, { ok: true, label: String(body.label || "Academy").slice(0, 40), expires: "", quota: body.quota || { used: 0, limit: QUOTA } }); return; }
       if (action === "lecture" || action === "analyse") {
-        const out = action === "lecture" ? await lecture(body) : await analyse(body);
+        const label = String(body.label || "Academy").slice(0, 40);
+        const out = await store.traced({ product: "pro", code: "ACADEMY", label: label, action: action, module: body.module || "" }, function () { return action === "lecture" ? lecture(body) : analyse(body); });
         send(res, 200, { ok: true, action: action, module: body.module || "", result: out.data, usage: out.usage, quota: body.quota || { used: 0, limit: QUOTA } });
         return;
       }
@@ -377,24 +371,27 @@ module.exports = async function handler(req, res) {
     if (action === "mint") {
       if (!ADMIN_KEY || String(body.adminKey || "") !== ADMIN_KEY) { send(res, 401, { ok: false, error: "Clé admin incorrecte." }); return; }
       if (!SECRET) { send(res, 500, { ok: false, error: "DAF_ACCESS_SECRET manquant côté serveur." }); return; }
-      send(res, 200, Object.assign({ ok: true }, mintCode(body.name, body.months)));
+      const m = mintCode(body.name, body.months);
+      await store.saveClient({ code: m.code, product: "pro", tag: m.label, name: String(body.name || "").trim().slice(0, 80), email: String(body.email || "").trim().slice(0, 120), note: String(body.note || "").trim().slice(0, 500), quota: parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0, months: parseInt(body.months, 10) || 12, created: new Date().toISOString(), expires: m.expires, source: String(body.source || "api").slice(0, 40) });
+      send(res, 200, Object.assign({ ok: true }, m));
       return;
     }
 
     const access = checkCode(body.code);
     if (!access.ok) { send(res, 401, access); return; }
-    const q = quotaState(access.code);
+    if (await store.isRevoked(access.code)) { send(res, 401, { ok: false, error: "Cet accès a été désactivé." }); return; }
+    const limit = await quotaLimit(access.code);
 
     if (action === "verify") {
-      send(res, 200, { ok: true, label: access.label, expires: access.expires, quota: { used: q.runs.size, limit: QUOTA } });
+      send(res, 200, { ok: true, label: access.label, expires: access.expires, quota: { used: await store.quotaUsed(access.code), limit: limit } });
       return;
     }
 
     if (action === "lecture" || action === "analyse") {
       const runId = String(body.runId || "").slice(0, 64);
-      const c = consumeRun(access.code, runId);
-      if (!c.ok) { send(res, 429, { ok: false, error: "Quota du jour atteint (" + QUOTA + " analyses). Reviens demain ou contacte l'équipe Phénix.", quota: { used: c.used, limit: c.limit } }); return; }
-      const out = action === "lecture" ? await lecture(body) : await analyse(body);
+      const c = await store.consumeRun("pro", access.code, runId, limit);
+      if (!c.ok) { send(res, 429, { ok: false, error: "Quota du jour atteint (" + limit + " analyses). Reviens demain ou contacte l'équipe Phénix.", quota: { used: c.used, limit: c.limit } }); return; }
+      const out = await store.traced({ product: "pro", code: access.code, label: access.label, action: action, module: body.module || "" }, function () { return action === "lecture" ? lecture(body) : analyse(body); });
       send(res, 200, { ok: true, action: action, module: body.module || "", result: out.data, usage: out.usage, quota: { used: c.used, limit: c.limit } });
       return;
     }
@@ -405,4 +402,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { callClaude: callClaude, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, consumeRun: consumeRun, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
+module.exports._internal = { callClaude: callClaude, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, quotaLimit: quotaLimit, MODEL: MODEL, EFFORT: EFFORT, QUOTA: QUOTA, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };

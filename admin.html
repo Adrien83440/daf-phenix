@@ -4,134 +4,645 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>DAF Phénix — accès clients</title>
+<title>Phénix — console</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0B0910;--ink:#F5EFE6;--ink2:rgba(245,239,230,.66);--ink3:rgba(245,239,230,.42);--gold:#DCA84E;--gold2:#F3CF7A;--ember:#E8722C;--plum:#7B4FB8;--ok:#8FD9A8;--bad:#FF7A7A;--line:rgba(255,255,255,.13);--fill:rgba(255,255,255,.055);--fill2:rgba(255,255,255,.10)}
+:root{--bg:#0B0910;--ink:#F5EFE6;--ink2:rgba(245,239,230,.66);--ink3:rgba(245,239,230,.42);--gold:#DCA84E;--gold2:#F3CF7A;--ember:#E8722C;--plum:#7B4FB8;--ok:#8FD9A8;--bad:#FF7A7A;--warn:#F0BE5B;--line:rgba(255,255,255,.13);--line2:rgba(255,255,255,.26);--fill:rgba(255,255,255,.055);--fill2:rgba(255,255,255,.10);--r:24px;--r2:16px}
 *{box-sizing:border-box}[hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:16px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
-h1,h2{font-family:Fraunces,Georgia,serif;font-weight:500;margin:0;letter-spacing:-.01em}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,-apple-system,system-ui,sans-serif;font-size:15px;line-height:1.5;min-height:100vh;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;margin:0;letter-spacing:-.01em}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--gold2)}
 .bg{position:fixed;inset:0;z-index:-1;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#1A1320 0%,var(--bg) 60%)}
 .blob{position:absolute;border-radius:50%;filter:blur(70px);transform:translateZ(0)}
-.b1{width:60vmax;height:60vmax;left:-20vmax;top:-26vmax;background:var(--ember);opacity:.4}
-.b2{width:50vmax;height:50vmax;right:-18vmax;top:24vh;background:var(--gold);opacity:.28}
-.b3{width:56vmax;height:56vmax;left:10vmax;bottom:-30vmax;background:var(--plum);opacity:.4}
-.wrap{max-width:560px;margin:0 auto;padding:22px 16px 60px}
-.glass{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.12),rgba(255,255,255,.045) 55%,rgba(255,255,255,.08));backdrop-filter:blur(30px) saturate(170%);-webkit-backdrop-filter:blur(30px) saturate(170%);border:1px solid var(--line);border-radius:28px;box-shadow:0 30px 70px -28px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.24) inset;padding:26px;margin-bottom:14px}
-.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(110% 55% at 50% -8%,rgba(255,255,255,.2),transparent 62%)}
+.b1{width:60vmax;height:60vmax;left:-20vmax;top:-26vmax;background:var(--ember);opacity:.32}
+.b2{width:50vmax;height:50vmax;right:-18vmax;top:24vh;background:var(--gold);opacity:.22}
+.b3{width:56vmax;height:56vmax;left:10vmax;bottom:-30vmax;background:var(--plum);opacity:.34}
+.wrap{max-width:1180px;margin:0 auto;padding:16px 16px 60px}
+.glass{position:relative;background:linear-gradient(160deg,rgba(255,255,255,.11),rgba(255,255,255,.04) 55%,rgba(255,255,255,.07));backdrop-filter:blur(30px) saturate(170%);-webkit-backdrop-filter:blur(30px) saturate(170%);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 70px -28px rgba(0,0,0,.7),0 1px 0 rgba(255,255,255,.22) inset}
+.glass::before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:radial-gradient(110% 55% at 50% -8%,rgba(255,255,255,.18),transparent 62%)}
 .glass>*{position:relative}
-h1{font-size:30px;line-height:1.1;margin-bottom:6px}
-h2{font-size:22px;margin-bottom:12px}
-.sub{color:var(--ink2);margin:0 0 18px;font-size:15px}
-.lbl{display:block;font-size:13px;color:var(--ink2);margin:14px 0 6px}
-.field{width:100%;padding:14px 16px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);outline:none;font:inherit;font-size:16px;-webkit-appearance:none;appearance:none}
-.field:focus{border-color:rgba(220,168,78,.7);box-shadow:0 0 0 4px rgba(220,168,78,.18)}
-select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23F5EFE6' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center}
+.panel{padding:22px;margin-bottom:14px}
+.soft{background:var(--fill);border:1px solid var(--line);border-radius:var(--r2)}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px 9px 14px;margin-bottom:12px;border-radius:999px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:Fraunces,Georgia,serif;font-size:19px}
+.brand .mark{width:32px;height:32px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(160deg,rgba(243,207,122,.35),rgba(232,114,44,.25));border:1px solid rgba(255,255,255,.22)}
+.brand .mark svg{width:18px;height:18px;color:var(--gold2)}
+.top-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;background:var(--fill);border:1px solid var(--line);font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.chip i{width:8px;height:8px;border-radius:50%;background:var(--ink3);font-style:normal;flex:none}
+.chip.ok i{background:var(--ok)}.chip.warn i{background:var(--warn)}.chip.bad i{background:var(--bad)}
+.chip-btn{cursor:pointer}
+.nav{display:flex;gap:4px;padding:5px;margin-bottom:14px;border-radius:999px;overflow-x:auto;scrollbar-width:none}
+.nav::-webkit-scrollbar{display:none}
+.nav button{flex:1;border:0;background:transparent;padding:10px 14px;border-radius:999px;color:var(--ink2);cursor:pointer;font-size:14px;white-space:nowrap;transition:background .2s,color .2s}
+.nav button.on{background:var(--fill2);color:var(--ink);box-shadow:0 1px 0 rgba(255,255,255,.2) inset}
+.view{display:none}.view.on{display:block;animation:rise .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.h-title{font-size:26px;line-height:1.1;margin-bottom:4px}
+.h-sub{color:var(--ink2);margin-bottom:16px;font-size:14px}
+.lbl{display:block;font-size:12.5px;color:var(--ink2);margin:12px 0 5px}
+.field,textarea.field,select.field{width:100%;padding:12px 14px;border-radius:14px;background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--ink);outline:none;font-size:15px;-webkit-appearance:none;appearance:none}
+.field:focus{border-color:rgba(220,168,78,.7);box-shadow:0 0 0 4px rgba(220,168,78,.16)}
+.field::placeholder{color:var(--ink3)}
+select.field{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23F5EFE6' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}
 select.field option{color:#111;background:#fff}
-textarea.field{min-height:120px;resize:vertical;line-height:1.45}
-.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:10px}
+textarea.field{min-height:110px;resize:vertical;line-height:1.45}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.grid{display:grid;gap:10px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}
 .grid .lbl{margin-top:0}
-.btn{display:flex;align-items:center;justify-content:center;width:100%;padding:15px 20px;border-radius:999px;border:0;cursor:pointer;font:inherit;font-size:16px;font-weight:500;margin-top:16px;transition:transform .15s}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 18px;border-radius:999px;border:0;cursor:pointer;font-size:14.5px;font-weight:500;transition:transform .15s,opacity .2s;white-space:nowrap}
 .btn:active{transform:scale(.98)}
-.btn.primary{color:#2A1B06;background:linear-gradient(180deg,#F7DC93 0%,#DCA84E 55%,#C88F2F 100%);box-shadow:0 14px 34px -10px rgba(220,168,78,.75),0 1px 0 rgba(255,255,255,.6) inset}
+.btn.primary{color:#2A1B06;background:linear-gradient(180deg,#F7DC93 0%,#DCA84E 55%,#C88F2F 100%);box-shadow:0 12px 30px -10px rgba(220,168,78,.7),0 1px 0 rgba(255,255,255,.6) inset}
 .btn.ghost{background:var(--fill2);border:1px solid var(--line);color:var(--ink)}
-.btn:disabled{opacity:.55;cursor:default}
-.code{margin-top:18px;padding:18px;border-radius:20px;background:linear-gradient(160deg,rgba(220,168,78,.18),rgba(232,114,44,.08));border:1px solid rgba(220,168,78,.4);text-align:center}
+.btn.danger{background:rgba(255,122,122,.12);border:1px solid rgba(255,122,122,.35);color:var(--bad)}
+.btn.small{padding:7px 12px;font-size:13px}
+.btn.wide{width:100%}
+.btn:disabled{opacity:.5;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.err{color:var(--bad);font-size:13px;margin-top:8px;min-height:18px}
+.hint{font-size:12.5px;color:var(--ink3);margin-top:6px;line-height:1.45}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kpi{padding:13px 14px;border-radius:var(--r2);background:var(--fill);border:1px solid var(--line)}
+.kpi-l{font-size:12px;color:var(--ink3);line-height:1.3}
+.kpi-v{font-family:Fraunces,Georgia,serif;font-size:24px;margin-top:3px;line-height:1.15}
+.kpi-d{font-size:12px;color:var(--ink2);margin-top:3px;line-height:1.35}
+.tbl-wrap{overflow-x:auto;border-radius:var(--r2);border:1px solid var(--line)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{padding:10px 12px;text-align:left;vertical-align:middle;white-space:nowrap}
+th{font-weight:500;font-size:12px;color:var(--ink3);background:var(--fill);position:sticky;top:0}
+tr+tr td{border-top:1px solid var(--line)}
+tr.row{cursor:pointer}
+tr.row:hover td{background:rgba(255,255,255,.04)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td .sub{display:block;font-size:11.5px;color:var(--ink3)}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;font-size:11.5px;border:1px solid;white-space:nowrap}
+.badge.actif{color:var(--ok);border-color:rgba(143,217,168,.35);background:rgba(143,217,168,.1)}
+.badge.bientot{color:var(--warn);border-color:rgba(240,190,91,.35);background:rgba(240,190,91,.1)}
+.badge.expire,.badge.revoque{color:var(--bad);border-color:rgba(255,122,122,.35);background:rgba(255,122,122,.1)}
+.badge.remplace,.badge.inconnu,.badge.academy{color:var(--ink2);border-color:var(--line2);background:var(--fill)}
+.badge.pro{color:var(--gold2);border-color:rgba(220,168,78,.4);background:rgba(220,168,78,.1)}
+.badge.perso{color:#C9B3F0;border-color:rgba(123,79,184,.5);background:rgba(123,79,184,.16)}
+.badge.ok{color:var(--ok);border-color:rgba(143,217,168,.35);background:rgba(143,217,168,.1)}
+.badge.ko{color:var(--bad);border-color:rgba(255,122,122,.35);background:rgba(255,122,122,.1)}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+.toolbar .field{width:auto;min-width:150px;padding:9px 12px;font-size:14px}
+.toolbar .field.search{flex:1;min-width:180px}
+.toolbar .count{font-size:13px;color:var(--ink3);margin-left:auto}
+.seg{display:inline-flex;padding:3px;gap:3px;border-radius:999px}
+.seg button{border:0;background:transparent;padding:7px 12px;border-radius:999px;color:var(--ink2);cursor:pointer;font-size:13px}
+.seg button.on{background:var(--fill2);color:var(--ink)}
+.chart{width:100%;height:190px;display:block;border-radius:var(--r2);background:var(--fill);border:1px solid var(--line)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin-top:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.warn-box{padding:12px 14px;border-radius:var(--r2);background:rgba(240,190,91,.1);border:1px solid rgba(240,190,91,.35);font-size:13.5px;line-height:1.5;margin-bottom:14px}
+.warn-box b{font-weight:500}
+.code{margin-top:14px;padding:16px;border-radius:var(--r2);background:linear-gradient(160deg,rgba(220,168,78,.18),rgba(232,114,44,.08));border:1px solid rgba(220,168,78,.4);text-align:center}
 .code b{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;letter-spacing:.06em;word-break:break-all;font-weight:500}
 .code small{display:block;color:var(--ink2);margin-top:6px;font-size:13px}
-.err{color:var(--bad);font-size:13.5px;margin-top:8px;min-height:20px}
-.ok{color:var(--ok)}
-.hint{font-size:13px;color:var(--ink3);margin-top:8px}
-.badge{display:inline-block;padding:5px 11px;border-radius:999px;font-size:12.5px;border:1px solid rgba(143,217,168,.3);color:var(--ok);background:rgba(143,217,168,.12);margin-top:12px}
-.badge.bad{border-color:rgba(255,122,122,.3);color:var(--bad);background:rgba(255,122,122,.12)}
+.linkrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--r2);margin-bottom:8px}
+.linkrow b{font-weight:500;min-width:140px}
+.linkrow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
+.modal{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;background:rgba(5,3,10,.6);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.modal.on{display:flex}
+.modal .sheet{width:100%;max-width:820px;max-height:92vh;overflow:auto;padding:22px;border-radius:var(--r) var(--r) 0 0}
+.modal .close{position:absolute;right:16px;top:14px;border:1px solid var(--line);background:var(--fill2);color:var(--ink);border-radius:999px;width:34px;height:34px;cursor:pointer;font-size:18px;line-height:1}
+.dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;font-size:13.5px;margin:12px 0}
+.dl div{padding:8px 10px;border-radius:12px;background:var(--fill);border:1px solid var(--line)}
+.dl small{display:block;color:var(--ink3);font-size:11.5px}
+.dl .mono{font-size:12.5px;word-break:break-all;white-space:normal}
+.sec{margin-top:18px}
+.sec h3{font-size:17px;margin-bottom:10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;padding:12px 18px;border-radius:999px;font-size:14px;max-width:90vw;pointer-events:none;transition:all .3s;z-index:70;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.bad{border-color:rgba(255,122,122,.5)}
+.login{max-width:480px;margin:10vh auto 0}
+.login .h-title{font-size:30px}
+.foot{text-align:center;color:var(--ink3);font-size:12px;margin-top:22px}
+@media (min-width:760px){
+  .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kpis.six{grid-template-columns:repeat(6,minmax(0,1fr))}
+  .modal{align-items:center;padding:20px}
+  .modal .sheet{border-radius:var(--r)}
+  .panel{padding:26px}
+}
+@media (max-width:759px){
+  .g2,.g3,.g4,.g6{grid-template-columns:1fr}
+  .dl{grid-template-columns:1fr}
+  .nav button{flex:none}
+}
 </style>
-<script>window.DAF_CONFIG = { endpoint: "/api/daf", endpointPerso: "/api/perso" };</script>
+<script>
+window.ADMIN_CONFIG = { endpoint: "/api/admin" };
+</script>
 </head>
 <body>
 <div class="bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-flame" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2c.6 3.2 2.4 5 4.5 7 2 2 3.5 4 3.5 6.8A8 8 0 0 1 4 15.8c0-2.4 1.1-4.3 2.6-5.8.2 1.6 1 2.6 2.1 3.2C8.5 9.4 10 5.6 12 2Zm0 20a4 4 0 0 0 4-4c0-1.6-.9-2.8-2-4-.2 1.3-.8 2-1.7 2.4C12.5 14.9 11.8 13.4 11 12c-1.6 1.4-3 3-3 5.6A4 4 0 0 0 12 22Z"/></symbol>
+</svg>
+
 <div class="wrap">
-  <div class="glass">
-    <h1>Accès clients</h1>
-    <p class="sub">Génère un code d'accès pour un client. Le code est valable jusqu'à la fin du mois choisi et se vérifie sans base de données.</p>
-    <label class="lbl" for="product">Produit</label>
-    <select class="field" id="product"><option value="pro">DAF Phénix (entreprises, PHX-…)</option><option value="perso">Phénix Perso (particuliers, PXP-…)</option></select>
-    <label class="lbl" for="admin">Clé admin</label>
-    <input class="field" id="admin" type="password" autocomplete="current-password" placeholder="DAF_ADMIN_KEY">
-    <div class="grid" style="margin-top:14px">
-      <div><label class="lbl" for="name">Client (nom, marque)</label><input class="field" id="name" placeholder="Le Comptoir"></div>
-      <div><label class="lbl" for="months">Durée</label><select class="field" id="months"><option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="24">24 mois</option></select></div>
+  <!-- Connexion -->
+  <section class="view on" id="v-login">
+    <div class="glass panel login">
+      <h1 class="h-title">Console Phénix</h1>
+      <p class="h-sub">Clients, accès, usage et coût des deux produits : DAF Phénix (entreprises) et Phénix Perso (particuliers).</p>
+      <label class="lbl" for="admin-key">Clé admin</label>
+      <input class="field mono" id="admin-key" type="password" autocomplete="current-password" placeholder="DAF_ADMIN_KEY">
+      <div class="err" id="login-err"></div>
+      <button class="btn primary wide" id="btn-login" type="button">Entrer</button>
+      <p class="hint" style="text-align:center;margin-top:10px">La clé reste dans cet onglet le temps de la session.</p>
     </div>
-    <button class="btn primary" id="mint" type="button">Générer le code</button>
-    <div class="err" id="mint-err"></div>
-    <div class="code" id="code-box" hidden><b id="code"></b><small id="code-meta"></small></div>
-    <div id="msg-wrap" hidden>
-      <label class="lbl" for="msg">Message prêt à envoyer</label>
-      <textarea class="field" id="msg"></textarea>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <button class="btn ghost" id="copy-code" type="button">Copier le code</button>
-        <button class="btn ghost" id="copy-msg" type="button">Copier le message</button>
+  </section>
+
+  <!-- Application -->
+  <div id="app" hidden>
+    <header class="top glass">
+      <div class="brand"><span class="mark"><svg><use href="#i-flame"/></svg></span>Console Phénix</div>
+      <div class="top-right">
+        <span class="chip" id="chip-env"><i></i><span>…</span></span>
+        <span class="chip" id="chip-store"><i></i><span>…</span></span>
+        <button class="chip chip-btn" id="btn-refresh" type="button">Actualiser</button>
+        <button class="chip chip-btn" id="btn-logout" type="button">Quitter</button>
       </div>
-    </div>
-    <p class="hint">Pour désactiver un client avant l'échéance : ajoute son identifiant (la partie entre le préfixe et la date, par exemple LECOMPTOIR) à la variable DAF_REVOKED (codes PHX) ou PERSO_REVOKED (codes PXP) sur Vercel, puis redéploie. Un code Pro ouvre aussi l'espace Perso ; l'inverse n'est pas vrai.</p>
+    </header>
+    <nav class="nav glass" id="nav">
+      <button type="button" data-v="dash" class="on">Tableau de bord</button>
+      <button type="button" data-v="clients">Clients</button>
+      <button type="button" data-v="new">Nouvel accès</button>
+      <button type="button" data-v="activity">Activité</button>
+      <button type="button" data-v="links">Liens &amp; messages</button>
+      <button type="button" data-v="settings">Réglages</button>
+    </nav>
+
+    <!-- Tableau de bord -->
+    <section class="view on" id="v-dash">
+      <div class="warn-box" id="dash-warn" hidden></div>
+      <div class="glass panel">
+        <div class="btns" style="justify-content:space-between;margin-bottom:14px"><h2 style="font-size:22px">Vue d'ensemble</h2><span class="hint" id="dash-date" style="margin:0"></span></div>
+        <div class="kpis six" id="dash-kpis"></div>
+      </div>
+      <div class="grid g2">
+        <div class="glass panel">
+          <h3 style="font-size:17px;margin-bottom:10px">Analyses par jour, 30 jours</h3>
+          <div id="dash-chart"></div>
+          <div class="legend"><span><i style="background:var(--gold)"></i>DAF Phénix (Pro)</span><span><i style="background:var(--plum)"></i>Phénix Perso</span></div>
+        </div>
+        <div class="glass panel">
+          <h3 style="font-size:17px;margin-bottom:10px">Clients</h3>
+          <div class="kpis" id="dash-clients"></div>
+          <div class="btns" style="margin-top:12px"><button class="btn ghost small" type="button" data-go="clients">Voir les clients</button><button class="btn primary small" type="button" data-go="new">Nouvel accès</button></div>
+        </div>
+      </div>
+      <div class="glass panel">
+        <div class="btns" style="justify-content:space-between;margin-bottom:10px"><h3 style="font-size:17px">Dernière activité</h3><button class="btn ghost small" type="button" data-go="activity">Tout voir</button></div>
+        <div class="tbl-wrap"><table id="dash-events"></table></div>
+      </div>
+    </section>
+
+    <!-- Clients -->
+    <section class="view" id="v-clients">
+      <div class="glass panel">
+        <h2 style="font-size:22px;margin-bottom:4px">Clients et abonnés</h2>
+        <p class="h-sub">Clique sur une ligne pour la fiche : modifier, prolonger, révoquer, copier le lien ou le message.</p>
+        <div class="toolbar">
+          <div class="seg soft" id="f-product"><button type="button" data-p="" class="on">Tous</button><button type="button" data-p="pro">Pro</button><button type="button" data-p="perso">Perso</button></div>
+          <select class="field" id="f-status"><option value="">Tous les statuts</option><option value="actif">Actifs</option><option value="bientot">Expirent bientôt</option><option value="expire">Expirés</option><option value="revoque">Révoqués</option><option value="remplace">Remplacés</option><option value="inconnu">Non enregistrés</option></select>
+          <input class="field search" id="f-search" placeholder="Nom, code, e-mail, note…">
+          <span class="count" id="f-count"></span>
+        </div>
+        <div class="tbl-wrap"><table id="clients-table"></table></div>
+        <p class="hint" id="clients-hint"></p>
+      </div>
+    </section>
+
+    <!-- Nouvel accès -->
+    <section class="view" id="v-new">
+      <div class="grid g2">
+        <div class="glass panel">
+          <h2 style="font-size:22px;margin-bottom:4px">Nouvel accès</h2>
+          <p class="h-sub">Génère un code, il est enregistré dans la liste des clients avec sa fiche.</p>
+          <label class="lbl" for="n-product">Produit</label>
+          <select class="field" id="n-product"><option value="pro">DAF Phénix — entreprises (PHX-…)</option><option value="perso">Phénix Perso — particuliers (PXP-…)</option></select>
+          <div class="grid g2" style="margin-top:12px">
+            <div><label class="lbl" for="n-name">Nom (client, marque, prénom)</label><input class="field" id="n-name" placeholder="Le Comptoir" maxlength="80"></div>
+            <div><label class="lbl" for="n-months">Durée</label><select class="field" id="n-months"><option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="24">24 mois</option></select></div>
+            <div><label class="lbl" for="n-email">E-mail (facultatif)</label><input class="field" id="n-email" type="email" placeholder="pour retrouver le client"></div>
+            <div><label class="lbl" for="n-quota">Quota par jour (vide = défaut)</label><input class="field" id="n-quota" inputmode="numeric" placeholder="défaut"></div>
+          </div>
+          <label class="lbl" for="n-note">Note interne (facultatif)</label>
+          <input class="field" id="n-note" placeholder="Offre de lancement, formation X, parrainage…" maxlength="500">
+          <div class="err" id="n-err"></div>
+          <button class="btn primary wide" id="btn-mint" type="button">Générer le code</button>
+          <div id="n-result" hidden>
+            <div class="code"><b id="n-code"></b><small id="n-meta"></small></div>
+            <label class="lbl" for="n-msg">Message prêt à envoyer</label>
+            <textarea class="field" id="n-msg" style="min-height:170px"></textarea>
+            <div class="btns" style="margin-top:10px">
+              <button class="btn ghost small" type="button" data-copy="n-code">Copier le code</button>
+              <button class="btn ghost small" type="button" id="n-copy-link">Copier le lien</button>
+              <button class="btn ghost small" type="button" data-copy="n-msg">Copier le message</button>
+              <a class="btn ghost small" id="n-mailto" href="#" hidden>Ouvrir dans l'e-mail</a>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="glass panel">
+            <h3 style="font-size:18px;margin-bottom:4px">Enregistrer un code existant</h3>
+            <p class="h-sub">Pour suivre un code émis avant la console, par l'API ou par un scénario Make.</p>
+            <label class="lbl" for="i-code">Code</label>
+            <input class="field mono" id="i-code" placeholder="PHX-… ou PXP-…" autocapitalize="characters" spellcheck="false">
+            <div class="grid g2" style="margin-top:12px">
+              <div><label class="lbl" for="i-name">Nom</label><input class="field" id="i-name" placeholder="facultatif"></div>
+              <div><label class="lbl" for="i-email">E-mail</label><input class="field" id="i-email" placeholder="facultatif"></div>
+            </div>
+            <div class="err" id="i-err"></div>
+            <button class="btn ghost wide" id="btn-import" type="button">Enregistrer</button>
+          </div>
+          <div class="glass panel">
+            <h3 style="font-size:18px;margin-bottom:4px">Vérifier un code</h3>
+            <p class="h-sub">Validité, produit, client, bilans du jour.</p>
+            <input class="field mono" id="c-code" placeholder="PHX-… ou PXP-…" autocapitalize="characters" spellcheck="false">
+            <button class="btn ghost wide" id="btn-check" type="button" style="margin-top:10px">Vérifier</button>
+            <div id="c-out" style="margin-top:10px"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activité -->
+    <section class="view" id="v-activity">
+      <div class="glass panel">
+        <h2 style="font-size:22px;margin-bottom:4px">Activité</h2>
+        <p class="h-sub">Un événement par appel à l'IA (lecture ou analyse). Le coût est estimé à partir des jetons et des tarifs du modèle.</p>
+        <div class="toolbar">
+          <div class="seg soft" id="a-product"><button type="button" data-p="" class="on">Tous</button><button type="button" data-p="pro">Pro</button><button type="button" data-p="perso">Perso</button></div>
+          <label class="chip" style="cursor:pointer"><input type="checkbox" id="a-errors" style="margin:0 6px 0 0">Erreurs seulement</label>
+          <span class="count" id="a-count"></span>
+        </div>
+        <div class="tbl-wrap"><table id="events-table"></table></div>
+      </div>
+      <div class="glass panel">
+        <h3 style="font-size:17px;margin-bottom:10px">Jour par jour, 30 jours</h3>
+        <div class="tbl-wrap"><table id="days-table"></table></div>
+      </div>
+    </section>
+
+    <!-- Liens & messages -->
+    <section class="view" id="v-links">
+      <div class="glass panel">
+        <h2 style="font-size:22px;margin-bottom:4px">Liens à fournir</h2>
+        <p class="h-sub">Les adresses à donner aux clients, et celle-ci pour toi.</p>
+        <div id="links-list"></div>
+      </div>
+      <div class="grid g2">
+        <div class="glass panel">
+          <h3 style="font-size:18px;margin-bottom:4px">Message DAF Phénix (Pro)</h3>
+          <p class="h-sub">Variables : {nom}, {code}, {lien}, {expiration}, {quota}.</p>
+          <textarea class="field" id="tpl-pro" style="min-height:200px"></textarea>
+          <div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-tpl-save="pro">Enregistrer</button><button class="btn ghost small" type="button" data-tpl-reset="pro">Rétablir le texte par défaut</button></div>
+        </div>
+        <div class="glass panel">
+          <h3 style="font-size:18px;margin-bottom:4px">Message Phénix Perso</h3>
+          <p class="h-sub">Mêmes variables. Enregistré dans ce navigateur.</p>
+          <textarea class="field" id="tpl-perso" style="min-height:200px"></textarea>
+          <div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-tpl-save="perso">Enregistrer</button><button class="btn ghost small" type="button" data-tpl-reset="perso">Rétablir le texte par défaut</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Réglages -->
+    <section class="view" id="v-settings">
+      <div class="glass panel">
+        <h2 style="font-size:22px;margin-bottom:4px">Réglages et santé</h2>
+        <p class="h-sub">Tout se règle dans les variables d'environnement Vercel (Settings → Environment Variables, puis Redeploy).</p>
+        <div class="kpis" id="settings-kpis"></div>
+        <div class="sec"><h3>Variables</h3><div class="tbl-wrap"><table id="settings-table"></table></div></div>
+        <div class="sec" id="settings-store"></div>
+      </div>
+    </section>
   </div>
 
-  <div class="glass">
-    <h2>Vérifier un code</h2>
-    <input class="field" id="check" placeholder="PHX-… ou PXP-…" autocapitalize="characters" spellcheck="false">
-    <button class="btn ghost" id="verify" type="button">Vérifier</button>
-    <div id="check-out"></div>
-  </div>
+  <p class="foot">Console Phénix · réservée à l'administrateur</p>
 </div>
+
+<!-- Fiche client -->
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="glass sheet" id="modal-body"></div>
+</div>
+<div class="toast glass" id="toast" role="status" aria-live="polite"></div>
+
 <script>
 (function () {
+  "use strict";
+  var ENDPOINT = (window.ADMIN_CONFIG || {}).endpoint || "/api/admin";
+  var ORIGIN = location.origin.replace(/\/$/, "");
+  var LINKS = { pro: ORIGIN + "/", perso: ORIGIN + "/perso", admin: ORIGIN + "/admin" };
+  var PRODUCT = { pro: "DAF Phénix", perso: "Phénix Perso" };
+  var STATUS = { actif: "Actif", bientot: "Expire bientôt", expire: "Expiré", revoque: "Révoqué", remplace: "Remplacé", inconnu: "Non enregistré", academy: "Academy" };
+  var TPL_DEFAULT = {
+    pro: "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : {lien}\nCode d'accès : {code}\n\nColle ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Jusqu'à {quota} analyses par jour. Accès valable jusqu'au {expiration}.",
+    perso: "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : {lien}\nCode d'accès : {code}\n\nColle ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Ton espace se met à jour à chaque bilan. Jusqu'à {quota} bilans par jour. Accès valable jusqu'au {expiration}."
+  };
   var $ = function (id) { return document.getElementById(id); };
-  var ENDPOINT = (window.DAF_CONFIG || {}).endpoint || "/api/daf";
-  var ENDPOINT_PERSO = (window.DAF_CONFIG || {}).endpointPerso || "/api/perso";
-  var origin = location.origin.replace(/\/$/, "");
-  function endpointFor(product) { return product === "perso" ? ENDPOINT_PERSO : ENDPOINT; }
-  function productOfCode(code) { return /^PXP-/i.test(String(code || "").trim()) ? "perso" : "pro"; }
-  try { $("admin").value = sessionStorage.getItem("daf.admin") || ""; } catch (e) {}
-  function post(p, product) {
-    return fetch(endpointFor(product), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(p) })
-      .then(function (r) { return r.json(); }).catch(function () { return { ok: false, error: "Serveur injoignable." }; });
+  var S = { key: "", ov: null, clients: [], events: [], fp: "", fs: "", fq: "", ap: "", aerr: false, last: null };
+
+  // --- utilitaires -----------------------------------------------------------
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+  function n(v) { return nf.format(Math.round(+v || 0)); }
+  function usd(v) { v = +v || 0; return (v < 0.01 && v > 0 ? "< 0,01" : v.toFixed(2).replace(".", ",")) + " $"; }
+  function fmtDate(iso, withTime) { if (!iso) return "—"; try { var d = new Date(iso); return d.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) + (withTime ? " " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) : ""); } catch (e) { return iso; } }
+  function ago(iso) { if (!iso) return "jamais"; var s = (Date.now() - new Date(iso).getTime()) / 1000; if (s < 90) return "à l'instant"; if (s < 5400) return Math.round(s / 60) + " min"; if (s < 129600) return Math.round(s / 3600) + " h"; return Math.round(s / 86400) + " j"; }
+  function daysLeft(exp) { if (!exp) return null; return Math.round((new Date(exp + "T23:59:59Z").getTime() - Date.now()) / 864e5); }
+  var toastTimer;
+  function toast(msg, bad) { var t = $("toast"); t.textContent = msg; t.className = "toast glass on" + (bad ? " bad" : ""); clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.className = "toast glass"; }, bad ? 5000 : 2600); }
+  function copy(text, label) { var done = function () { toast((label || "Copié") + "."); }; if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done); else done(); }
+  function api(p) {
+    p.adminKey = S.key;
+    return fetch(ENDPOINT, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(p) })
+      .then(function (r) { return r.text().then(function (t) { try { return JSON.parse(t); } catch (e) { return { ok: false, error: "Réponse illisible (" + r.status + ")." }; } }); })
+      .catch(function () { return { ok: false, error: "Serveur injoignable." }; });
   }
-  function copy(text, btn, label) {
-    var done = function () { btn.textContent = "Copié"; setTimeout(function () { btn.textContent = label; }, 1600); };
-    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, done); else done();
+  function badge(kind, text) { return '<span class="badge ' + esc(kind) + '">' + esc(text) + "</span>"; }
+  function tpl(product) { try { return localStorage.getItem("daf.admin.tpl." + product) || TPL_DEFAULT[product]; } catch (e) { return TPL_DEFAULT[product]; } }
+  function message(c) {
+    var limit = c.limit || (c.product === "perso" ? (S.ov ? S.ov.config.quotaPerso : 5) : (S.ov ? S.ov.config.quotaPro : 10));
+    return tpl(c.product).replace(/\{nom\}/g, c.name || c.tag || "").replace(/\{code\}/g, c.code).replace(/\{lien\}/g, LINKS[c.product]).replace(/\{expiration\}/g, fmtDate(c.expires)).replace(/\{quota\}/g, limit);
   }
-  $("mint").addEventListener("click", function () {
-    var key = $("admin").value.trim(), name = $("name").value.trim();
-    $("mint-err").textContent = "";
-    if (!key) { $("mint-err").textContent = "Entre la clé admin."; return; }
-    if (!name) { $("mint-err").textContent = "Entre le nom du client."; return; }
-    try { sessionStorage.setItem("daf.admin", key); } catch (e) {}
-    var b = $("mint"); b.disabled = true;
-    var product = $("product").value;
-    post({ action: "mint", adminKey: key, name: name, months: $("months").value }, product).then(function (j) {
+  function show(v) {
+    document.querySelectorAll("#app .view").forEach(function (s) { s.classList.toggle("on", s.id === "v-" + v); });
+    document.querySelectorAll("#nav button").forEach(function (b) { b.classList.toggle("on", b.dataset.v === v); });
+    if (v === "activity" && !S.events.length) loadEvents();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // --- connexion ---------------------------------------------------------------
+  function login() {
+    var k = $("admin-key").value.trim(); $("login-err").textContent = "";
+    if (!k) { $("login-err").textContent = "Entre la clé admin."; return; }
+    var b = $("btn-login"); b.disabled = true; S.key = k;
+    api({ action: "overview" }).then(function (j) {
       b.disabled = false;
-      if (!j.ok) { $("mint-err").textContent = j.error || "Erreur."; return; }
-      $("code").textContent = j.code;
-      $("code-meta").textContent = (product === "perso" ? "Abonné(e) " : "Client ") + j.label + " · valable jusqu'au " + j.expires;
-      $("code-box").hidden = false; $("msg-wrap").hidden = false;
-      $("msg").value = product === "perso"
-        ? "Bienvenue sur Phénix Perso, ton directeur financier personnel dopé à l'IA.\n\nLien : " + origin + "/perso\nCode d'accès : " + j.code + "\n\nColle ton relevé de compte des deux ou trois derniers mois, vérifie ce que Phénix a compris, puis lance ton bilan complet : score, fuites, budget, dettes et plan 90 jours. Ton espace se met à jour à chaque bilan. Accès valable jusqu'au " + j.expires + "."
-        : "Voici ton accès DAF Phénix, ton directeur financier dopé à l'IA.\n\nLien : " + origin + "/\nCode d'accès : " + j.code + "\n\nColle ton relevé bancaire ou ton export compta des 3 derniers mois, laisse-le lire, puis lance l'audit complet. Accès valable jusqu'au " + j.expires + ".";
+      if (!j.ok) { S.key = ""; $("login-err").textContent = j.error || "Refusé."; return; }
+      try { sessionStorage.setItem("daf.admin", k); } catch (e) {}
+      S.ov = j; $("v-login").classList.remove("on"); $("app").hidden = false;
+      renderAll(); loadClients();
     });
-  });
-  $("copy-code").addEventListener("click", function () { copy($("code").textContent, $("copy-code"), "Copier le code"); });
-  $("copy-msg").addEventListener("click", function () { copy($("msg").value, $("copy-msg"), "Copier le message"); });
-  $("verify").addEventListener("click", function () {
-    var code = $("check").value.trim(); if (!code) return;
-    $("check-out").innerHTML = "";
-    var product = productOfCode(code);
-    post({ action: "verify", code: code }, product).then(function (j) {
-      $("check-out").innerHTML = j.ok
-        ? '<span class="badge">Valide · ' + (product === "perso" ? "Perso · " : "Pro · ") + j.label + (j.expires ? " · jusqu'au " + j.expires : "") + " · " + j.quota.used + "/" + j.quota.limit + (product === "perso" ? " bilans" : " analyses") + " aujourd'hui</span>"
-        : '<span class="badge bad">' + (j.error || "Refusé") + "</span>";
+  }
+  function logout() { S.key = ""; try { sessionStorage.removeItem("daf.admin"); } catch (e) {} location.reload(); }
+  function refresh() {
+    return api({ action: "overview" }).then(function (j) {
+      if (!j.ok) { toast(j.error || "Erreur", true); return; }
+      S.ov = j; S.events = []; renderAll(); loadClients();
+      if ($("v-activity").classList.contains("on")) loadEvents();
+      toast("Actualisé.");
     });
-  });
+  }
+
+  // --- tableau de bord ---------------------------------------------------------
+  function renderAll() { renderHeader(); renderDash(); renderLinks(); renderSettings(); }
+  function renderHeader() {
+    var c = S.ov.config;
+    $("chip-env").className = "chip " + (c.env === "production" ? "ok" : "warn"); $("chip-env").lastElementChild.textContent = (c.env === "production" ? "Production" : c.env) + (c.region ? " · " + c.region : "");
+    var st = c.store || {};
+    $("chip-store").className = "chip " + (st.backend === "kv" ? (st.ok ? "ok" : "bad") : "warn"); $("chip-store").lastElementChild.textContent = st.backend === "kv" ? (st.ok ? "Stockage KV" : "KV en panne") : "Mémoire seule";
+  }
+  function renderDash() {
+    var o = S.ov, t = o.totals, c = o.config, st = c.store || {};
+    $("dash-date").textContent = "Mis à jour " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    var w = [];
+    if (st.backend !== "kv") w.push("<b>Aucun stockage persistant.</b> Les clients, quotas et l'activité vivent dans la mémoire de la fonction : ils repartent de zéro à chaque redémarrage (souvent plusieurs fois par jour). Pour une console fiable, branche Vercel KV ou Upstash : voir Réglages.");
+    if (st.backend === "kv" && !st.ok) w.push("<b>Le stockage KV ne répond pas</b> (" + esc(st.error || "") + "). Les outils continuent de fonctionner en mémoire, mais la console ne voit rien de neuf.");
+    if (!c.configured.api || !c.configured.secret) w.push("<b>Configuration incomplète :</b> " + (!c.configured.api ? "ANTHROPIC_API_KEY manquante. " : "") + (!c.configured.secret ? "DAF_ACCESS_SECRET manquant. " : ""));
+    $("dash-warn").hidden = !w.length; $("dash-warn").innerHTML = w.join("<br>");
+    var k = [
+      ["Aujourd'hui", n(t.today.runs) + " analyses", n(t.today.calls) + " appels · " + usd(t.today.cost)],
+      ["7 jours", n(t.d7.runs) + " analyses", n(t.d7.calls) + " appels · " + usd(t.d7.cost)],
+      ["30 jours", n(t.d30.runs) + " analyses", n(t.d30.calls) + " appels · " + usd(t.d30.cost)],
+      ["Coût moyen / analyse", t.d30.runs ? usd(t.d30.cost / t.d30.runs) : "—", "sur 30 jours"],
+      ["Erreurs IA, 7 jours", n(t.d7.errors), t.d7.calls ? Math.round(t.d7.errors / t.d7.calls * 100) + " % des appels" : "aucun appel"],
+      ["Répartition 30 j", n(t.d30.pro_runs) + " Pro · " + n(t.d30.perso_runs) + " Perso", "analyses"]
+    ];
+    $("dash-kpis").innerHTML = k.map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("");
+    var cl = t.clients || {}, p = cl.pro || {}, q = cl.perso || {};
+    $("dash-clients").innerHTML = [["Pro actifs", (p.actif || 0) + (p.bientot || 0), (p.bientot || 0) + " expirent bientôt"], ["Perso actifs", (q.actif || 0) + (q.bientot || 0), (q.bientot || 0) + " expirent bientôt"], ["Expirés ou révoqués", (p.expire || 0) + (p.revoque || 0) + (q.expire || 0) + (q.revoque || 0), "les deux produits"]]
+      .map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("");
+    $("dash-chart").innerHTML = chart(o.days);
+    $("dash-events").innerHTML = eventsRows(o.events.slice(0, 12), true);
+  }
+  function chart(days) {
+    var w = 600, h = 190, px = 34, pb = 26, pt = 10;
+    var max = Math.max(1, Math.max.apply(null, days.map(function (d) { return d.pro.runs + d.perso.runs; })));
+    var bw = (w - px - 6) / days.length;
+    var bars = days.map(function (d, i) {
+      var x = px + i * bw + 1, hp = (d.pro.runs / max) * (h - pb - pt), hq = (d.perso.runs / max) * (h - pb - pt);
+      var y0 = h - pb;
+      return '<g><title>' + esc(fmtDate(d.date)) + " : " + d.pro.runs + " Pro, " + d.perso.runs + " Perso</title>" +
+        '<rect x="' + x.toFixed(1) + '" y="' + (y0 - hp).toFixed(1) + '" width="' + Math.max(1, bw - 2).toFixed(1) + '" height="' + hp.toFixed(1) + '" fill="#DCA84E" rx="1.5"/>' +
+        '<rect x="' + x.toFixed(1) + '" y="' + (y0 - hp - hq).toFixed(1) + '" width="' + Math.max(1, bw - 2).toFixed(1) + '" height="' + hq.toFixed(1) + '" fill="#7B4FB8" rx="1.5"/></g>';
+    }).join("");
+    var ticks = [0, Math.ceil(max / 2), max].map(function (v) { var y = h - pb - (v / max) * (h - pb - pt); return '<text x="' + (px - 6) + '" y="' + (y + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="rgba(245,239,230,.45)">' + v + '</text><line x1="' + px + '" x2="' + w + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '" stroke="rgba(255,255,255,.08)"/>'; }).join("");
+    var labels = [0, 9, 19, 29].filter(function (i) { return i < days.length; }).map(function (i) { return '<text x="' + (px + i * bw + bw / 2).toFixed(1) + '" y="' + (h - 8) + '" text-anchor="middle" font-size="10" fill="rgba(245,239,230,.45)">' + esc(days[i].date.slice(5).replace("-", "/")) + "</text>"; }).join("");
+    return '<svg class="chart" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none">' + ticks + bars + labels + "</svg>";
+  }
+  function eventsRows(list, compact) {
+    if (!list.length) return '<tr><td class="hint" style="padding:18px;text-align:center">Aucun événement pour l’instant.</td></tr>';
+    var pr = S.ov.config.prices;
+    var head = "<tr><th>Quand</th><th>Produit</th><th>Client</th><th>Appel</th><th>Statut</th>" + (compact ? "" : '<th class="num">Durée</th><th class="num">Jetons entrée</th><th class="num">Jetons sortie</th>') + '<th class="num">Coût</th></tr>';
+    return head + list.map(function (e) {
+      var cost = ((e.in || 0) * pr.in + (e.out || 0) * pr.out + (e.cache_read || 0) * pr.in * 0.1 + (e.cache_write || 0) * pr.in * 1.25) / 1e6;
+      return '<tr class="row" data-code="' + esc(e.code) + '"><td>' + esc(fmtDate(e.t, true)) + '<span class="sub">' + esc(ago(e.t)) + "</span></td><td>" + badge(e.product, PRODUCT[e.product] || e.product) + "</td><td>" + esc(e.label || e.code) + '<span class="sub mono">' + esc(e.code) + "</span></td><td>" + esc(e.action + (e.module ? " · " + e.module : "")) + "</td><td>" + (e.ok ? badge("ok", "OK") : badge("ko", "Échec") + (e.error ? '<span class="sub" title="' + esc(e.error) + '">' + esc(e.error.slice(0, 40)) + "</span>" : "")) + "</td>" +
+        (compact ? "" : '<td class="num">' + (e.ms ? (e.ms / 1000).toFixed(1).replace(".", ",") + " s" : "—") + '</td><td class="num">' + n(e.in) + (e.cache_read ? '<span class="sub">+ ' + n(e.cache_read) + " en cache</span>" : "") + '</td><td class="num">' + n(e.out) + "</td>") +
+        '<td class="num">' + usd(cost) + "</td></tr>";
+    }).join("");
+  }
+
+  // --- clients -----------------------------------------------------------------
+  function loadClients() {
+    return api({ action: "clients" }).then(function (j) {
+      if (!j.ok) { toast(j.error || "Erreur", true); return; }
+      S.clients = j.clients; renderClients();
+    });
+  }
+  function filtered() {
+    var q = S.fq.toLowerCase();
+    return S.clients.filter(function (c) {
+      if (S.fp && c.product !== S.fp) return false;
+      if (S.fs === "inconnu" ? !c.unregistered : (S.fs && c.status !== S.fs)) return false;
+      if (q && [c.name, c.tag, c.code, c.email, c.note].join(" ").toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+  }
+  function renderClients() {
+    var list = filtered();
+    $("f-count").textContent = list.length + " / " + S.clients.length;
+    var head = "<tr><th>Client</th><th>Produit</th><th>Statut</th><th>Expire</th><th class=\"num\">Aujourd'hui</th><th class=\"num\">Analyses</th><th class=\"num\">Appels</th><th class=\"num\">Coût</th><th>Dernier usage</th><th></th></tr>";
+    $("clients-table").innerHTML = list.length ? head + list.map(function (c) {
+      var dl = daysLeft(c.expires), s = c.stats || {};
+      return '<tr class="row" data-code="' + esc(c.code) + '"><td><b style="font-weight:500">' + esc(c.name || c.tag || c.code) + '</b><span class="sub mono">' + esc(c.code) + "</span></td><td>" + badge(c.product, PRODUCT[c.product] || c.product) + "</td><td>" + badge(c.status, STATUS[c.status] || c.status) + "</td><td>" + (c.expires ? esc(fmtDate(c.expires)) + '<span class="sub">' + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + "</span>" : "—") +
+        '</td><td class="num">' + c.usedToday + " / " + c.limit + '</td><td class="num">' + n(s.runs) + '</td><td class="num">' + n(s.calls) + (s.errors ? '<span class="sub">' + s.errors + " échec(s)</span>" : "") + '</td><td class="num">' + usd(c.cost) + "</td><td>" + esc(ago(s.last_seen)) + (s.last_action ? '<span class="sub">' + esc(s.last_action) + "</span>" : "") + '</td><td><button class="btn ghost small" type="button" data-copy-link="' + esc(c.code) + '">Lien + code</button></td></tr>';
+    }).join("") : '<tr><td class="hint" style="padding:22px;text-align:center">Aucun client ne correspond.</td></tr>';
+    $("clients-hint").textContent = S.ov.config.store.backend === "kv" ? "" : "Sans stockage KV, cette liste ne contient que les codes émis ou utilisés depuis le dernier redémarrage de la fonction.";
+  }
+  function findClient(code) { return S.clients.filter(function (c) { return c.code === code; })[0]; }
+  function openClient(code) {
+    var c = findClient(code); if (!c) { toast("Client non enregistré : utilise « Enregistrer un code existant ».", true); return; }
+    S.last = c;
+    var s = c.stats || {}, dl = daysLeft(c.expires);
+    var reg = !c.unregistered;
+    var html = '<button type="button" class="close" id="modal-close" aria-label="Fermer">×</button>' +
+      '<div class="btns" style="margin-bottom:6px">' + badge(c.product, PRODUCT[c.product] || c.product) + badge(c.status, STATUS[c.status] || c.status) + (c.source ? '<span class="hint" style="margin:0">via ' + esc(c.source) + "</span>" : "") + "</div>" +
+      '<h2 style="font-size:24px">' + esc(c.name || c.tag || c.code) + "</h2>" +
+      '<div class="dl"><div><small>Code</small><span class="mono">' + esc(c.code) + "</span></div><div><small>Expire</small>" + (c.expires ? esc(fmtDate(c.expires)) + (dl != null ? " (" + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + ")" : "") : "—") + "</div>" +
+      "<div><small>Créé</small>" + esc(fmtDate(c.created)) + (c.months ? " · " + c.months + " mois" : "") + "</div><div><small>Aujourd'hui</small>" + c.usedToday + " / " + c.limit + (c.quota ? " (quota personnalisé)" : "") + "</div>" +
+      "<div><small>Analyses · appels · échecs</small>" + n(s.runs) + " · " + n(s.calls) + " · " + n(s.errors) + "</div><div><small>Jetons entrée · sortie · coût</small>" + n(s.in) + " · " + n(s.out) + " · " + usd(c.cost) + "</div>" +
+      "<div><small>Dernier usage</small>" + (s.last_seen ? esc(fmtDate(s.last_seen, true)) + " (" + esc(s.last_action) + ")" : "jamais") + "</div>" + (c.replaces ? "<div><small>Remplace</small><span class=\"mono\">" + esc(c.replaces) + "</span></div>" : "") + (c.replacedBy ? "<div><small>Remplacé par</small><span class=\"mono\">" + esc(c.replacedBy) + "</span></div>" : "") + "</div>";
+    if (reg) {
+      html += '<div class="sec"><h3>Fiche</h3><div class="grid g2"><div><label class="lbl" for="m-name">Nom</label><input class="field" id="m-name" value="' + esc(c.name || "") + '"></div><div><label class="lbl" for="m-email">E-mail</label><input class="field" id="m-email" value="' + esc(c.email || "") + '"></div><div><label class="lbl" for="m-quota">Quota par jour (vide = défaut)</label><input class="field" id="m-quota" inputmode="numeric" value="' + esc(c.quota || "") + '"></div><div><label class="lbl" for="m-note">Note</label><input class="field" id="m-note" value="' + esc(c.note || "") + '"></div></div>' +
+        '<div class="btns" style="margin-top:10px"><button class="btn primary small" type="button" id="m-save">Enregistrer la fiche</button></div></div>';
+      html += '<div class="sec"><h3>Envoyer</h3><textarea class="field" id="m-msg" style="min-height:150px">' + esc(message(c)) + '</textarea><div class="btns" style="margin-top:8px"><button class="btn ghost small" type="button" data-copy-text="' + esc(c.code) + '">Copier le code</button><button class="btn ghost small" type="button" data-copy-text="' + esc(LINKS[c.product]) + '">Copier le lien</button><button class="btn ghost small" type="button" data-copy="m-msg">Copier le message</button>' + (c.email ? '<a class="btn ghost small" href="mailto:' + esc(c.email) + "?subject=" + encodeURIComponent("Ton accès " + PRODUCT[c.product]) + "&body=" + encodeURIComponent(message(c)) + '">Ouvrir dans l\'e-mail</a>' : "") + "</div></div>";
+      html += '<div class="sec"><h3>Accès</h3><div class="btns"><select class="field" id="m-months" style="width:auto"><option value="1">+ 1 mois</option><option value="3">+ 3 mois</option><option value="6">+ 6 mois</option><option value="12"' + (c.product === "pro" ? " selected" : "") + '>+ 12 mois</option><option value="24">+ 24 mois</option></select><button class="btn ghost small" type="button" id="m-extend">Prolonger (nouveau code)</button>' +
+        (c.status === "revoque" && c.revoked ? '<button class="btn ghost small" type="button" id="m-unrevoke">Réactiver</button>' : (c.status !== "remplace" ? '<button class="btn danger small" type="button" id="m-revoke">Révoquer</button>' : "")) +
+        '<button class="btn danger small" type="button" id="m-delete">Supprimer</button></div><p class="hint">Prolonger émet un nouveau code (même nom, même fiche) et révoque l\'ancien : envoie le nouveau code au client. Révoquer coupe l\'accès immédiatement. Supprimer révoque et retire la fiche.</p></div>';
+    } else {
+      html += '<div class="sec"><p class="hint">Ce code n\'est pas enregistré dans la console (Academy, code fixe, ou émis avant la console). Tu peux l\'enregistrer pour lui donner un nom et le suivre.</p><div class="btns" style="margin-top:10px">' + (c.code !== "ACADEMY" ? '<button class="btn ghost small" type="button" id="m-import">Enregistrer ce code</button>' : "") + "</div></div>";
+    }
+    $("modal-body").innerHTML = html; $("modal").classList.add("on");
+  }
+  function closeModal() { $("modal").classList.remove("on"); }
+  function afterChange(msg) { toast(msg); closeModal(); return refresh(); }
+
+  // --- nouvel accès ------------------------------------------------------------
+  function mintNew() {
+    $("n-err").textContent = "";
+    var name = $("n-name").value.trim(); if (!name) { $("n-err").textContent = "Entre un nom."; return; }
+    var b = $("btn-mint"); b.disabled = true;
+    api({ action: "mint", product: $("n-product").value, name: name, months: $("n-months").value, email: $("n-email").value.trim(), note: $("n-note").value.trim(), quota: $("n-quota").value.trim() }).then(function (j) {
+      b.disabled = false;
+      if (!j.ok) { $("n-err").textContent = j.error || "Erreur."; return; }
+      var c = j.client; c.limit = c.quota || (c.product === "perso" ? S.ov.config.quotaPerso : S.ov.config.quotaPro);
+      S.last = c;
+      $("n-code").textContent = c.code; $("n-meta").textContent = PRODUCT[c.product] + " · " + (c.name || c.tag) + " · valable jusqu'au " + fmtDate(c.expires);
+      $("n-msg").value = message(c);
+      var m = $("n-mailto"); m.hidden = !c.email; if (c.email) m.href = "mailto:" + c.email + "?subject=" + encodeURIComponent("Ton accès " + PRODUCT[c.product]) + "&body=" + encodeURIComponent(message(c));
+      $("n-result").hidden = false;
+      toast("Code généré et enregistré."); loadClients(); refreshQuiet();
+    });
+  }
+  function refreshQuiet() { api({ action: "overview" }).then(function (j) { if (j.ok) { S.ov = j; renderDash(); } }); }
+  function importCode() {
+    $("i-err").textContent = "";
+    var code = $("i-code").value.trim(); if (!code) { $("i-err").textContent = "Entre le code."; return; }
+    api({ action: "import", code: code, name: $("i-name").value.trim(), email: $("i-email").value.trim() }).then(function (j) {
+      if (!j.ok) { $("i-err").textContent = j.error || "Erreur."; return; }
+      toast("Code enregistré."); $("i-code").value = ""; $("i-name").value = ""; $("i-email").value = ""; loadClients();
+    });
+  }
+  function checkCode() {
+    var code = $("c-code").value.trim(); if (!code) return;
+    $("c-out").innerHTML = "";
+    api({ action: "verify", code: code }).then(function (j) {
+      if (!j.ok) { $("c-out").innerHTML = badge("ko", j.error || "Erreur"); return; }
+      if (!j.valid) { $("c-out").innerHTML = badge("ko", j.revoked ? "Révoqué" : (j.error || "Refusé")); return; }
+      $("c-out").innerHTML = badge("ok", "Valide") + " " + badge(j.product, PRODUCT[j.product]) + ' <span class="hint" style="margin:0">' + esc(j.client ? (j.client.name || j.label) : j.label + " (non enregistré)") + (j.expires ? " · jusqu'au " + esc(fmtDate(j.expires)) : "") + " · " + j.usedToday + " aujourd'hui</span>";
+    });
+  }
+
+  // --- activité ----------------------------------------------------------------
+  function loadEvents() {
+    api({ action: "events", n: 300 }).then(function (j) { if (!j.ok) { toast(j.error || "Erreur", true); return; } S.events = j.events; renderEvents(); });
+    renderDays();
+  }
+  function renderEvents() {
+    var list = S.events.filter(function (e) { return (!S.ap || e.product === S.ap) && (!S.aerr || !e.ok); });
+    $("a-count").textContent = list.length + " événement(s)";
+    $("events-table").innerHTML = eventsRows(list, false);
+  }
+  function renderDays() {
+    var pr = S.ov.config.prices, days = S.ov.days.slice().reverse();
+    var cost = function (s) { return ((s.in || 0) * pr.in + (s.out || 0) * pr.out + (s.cache_read || 0) * pr.in * 0.1 + (s.cache_write || 0) * pr.in * 1.25) / 1e6; };
+    $("days-table").innerHTML = '<tr><th>Jour</th><th class="num">Analyses Pro</th><th class="num">Analyses Perso</th><th class="num">Appels</th><th class="num">Échecs</th><th class="num">Jetons entrée</th><th class="num">Jetons sortie</th><th class="num">Coût</th></tr>' + days.map(function (d) {
+      var calls = d.pro.calls + d.perso.calls;
+      return "<tr" + (calls ? "" : ' style="opacity:.5"') + "><td>" + esc(fmtDate(d.date)) + '</td><td class="num">' + d.pro.runs + '</td><td class="num">' + d.perso.runs + '</td><td class="num">' + calls + '</td><td class="num">' + (d.pro.errors + d.perso.errors) + '</td><td class="num">' + n(d.pro.in + d.perso.in) + '</td><td class="num">' + n(d.pro.out + d.perso.out) + '</td><td class="num">' + usd(cost(d.pro) + cost(d.perso)) + "</td></tr>";
+    }).join("");
+  }
+
+  // --- liens & messages --------------------------------------------------------
+  function renderLinks() {
+    $("links-list").innerHTML = [["DAF Phénix (Pro)", LINKS.pro, "à donner aux dirigeants avec leur code PHX-…"], ["Phénix Perso", LINKS.perso, "à donner aux particuliers avec leur code PXP-…"], ["Console admin", LINKS.admin, "pour toi uniquement"]].map(function (l) {
+      return '<div class="linkrow soft"><b>' + esc(l[0]) + "</b><span>" + esc(l[1]) + ' <em style="color:var(--ink3);font-style:normal">· ' + esc(l[2]) + '</em></span><button class="btn ghost small" type="button" data-copy-text="' + esc(l[1]) + '">Copier</button></div>';
+    }).join("");
+    $("tpl-pro").value = tpl("pro"); $("tpl-perso").value = tpl("perso");
+  }
+
+  // --- réglages ----------------------------------------------------------------
+  function renderSettings() {
+    var c = S.ov.config, st = c.store || {};
+    $("settings-kpis").innerHTML = [["Modèle", c.model, "effort " + c.effort], ["Quota Pro", c.quotaPro + " / jour", "DAF_DAILY_QUOTA"], ["Quota Perso", c.quotaPerso + " / jour", "PERSO_DAILY_QUOTA"], ["Tarifs retenus", c.prices.in + " $ / " + c.prices.out + " $", "par million de jetons, entrée / sortie"], ["Stockage", st.backend === "kv" ? (st.ok ? "KV connecté" : "KV en panne") : "Mémoire d'instance", st.backend === "kv" ? "clients et activité conservés" : "rien n'est conservé"], ["Environnement", c.env || "—", c.region || ""]]
+      .map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v" style="font-size:19px">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("");
+    var rows = [
+      ["ANTHROPIC_API_KEY", c.configured.api, "clé API Anthropic"], ["DAF_ACCESS_SECRET", c.configured.secret, "signe tous les codes : ne jamais le changer"], ["DAF_ADMIN_KEY", c.configured.admin, "cette console"], ["DAF_BRIDGE_KEY", c.configured.bridge, "pont Academy (facultatif)"],
+      ["KV_REST_API_URL / KV_REST_API_TOKEN", st.backend === "kv", "Vercel KV ou Upstash (facultatif, recommandé)"],
+      ["DAF_REVOKED", c.revokedEnv.pro.length ? c.revokedEnv.pro.join(", ") : "", "identifiants Pro révoqués par variable"], ["PERSO_REVOKED", c.revokedEnv.perso.length ? c.revokedEnv.perso.join(", ") : "", "identifiants Perso révoqués par variable"],
+      ["DAF_ACCESS_CODES", c.staticCodes.pro.length ? c.staticCodes.pro.join(", ") : "", "codes fixes Pro"], ["PERSO_ACCESS_CODES", c.staticCodes.perso.length ? c.staticCodes.perso.join(", ") : "", "codes fixes Perso"]
+    ];
+    $("settings-table").innerHTML = "<tr><th>Variable</th><th>État</th><th>Rôle</th></tr>" + rows.map(function (r) {
+      var v = r[1], cell = typeof v === "boolean" ? (v ? badge("ok", "définie") : badge("ko", "absente")) : (v ? '<span class="mono">' + esc(v) + "</span>" : '<span class="hint" style="margin:0">vide</span>');
+      return '<tr><td class="mono">' + esc(r[0]) + "</td><td>" + cell + "</td><td>" + esc(r[2]) + "</td></tr>";
+    }).join("");
+    $("settings-store").innerHTML = "<h3>Stockage persistant</h3>" + (st.backend === "kv" ? '<p class="hint">Vercel KV est branché : clients, révocations, quotas et activité survivent aux redémarrages et sont partagés entre les instances.</p>' :
+      '<p class="hint">Pour conserver clients, quotas et activité : sur Vercel, Storage → Create Database → KV (Upstash), rattache-la au projet. Les variables KV_REST_API_URL et KV_REST_API_TOKEN sont posées automatiquement ; redéploie. Rien d\'autre à installer. Sans cela, les révocations faites ici ne tiennent que jusqu\'au prochain redémarrage : utilise alors DAF_REVOKED / PERSO_REVOKED.</p>');
+  }
+
+  // --- événements --------------------------------------------------------------
+  function bind() {
+    $("btn-login").addEventListener("click", login);
+    $("admin-key").addEventListener("keydown", function (e) { if (e.key === "Enter") login(); });
+    $("btn-logout").addEventListener("click", logout);
+    $("btn-refresh").addEventListener("click", refresh);
+    document.querySelectorAll("#nav button").forEach(function (b) { b.addEventListener("click", function () { show(b.dataset.v); }); });
+    document.addEventListener("click", function (e) {
+      var go = e.target.closest("[data-go]"); if (go) { show(go.dataset.go); return; }
+      var ct = e.target.closest("[data-copy-text]"); if (ct) { copy(ct.dataset.copyText, "Copié"); return; }
+      var cp = e.target.closest("[data-copy]"); if (cp) { var el = $(cp.dataset.copy); copy(el.value !== undefined && el.tagName !== "B" ? el.value : el.textContent, "Copié"); return; }
+      var cl = e.target.closest("[data-copy-link]"); if (cl) { e.stopPropagation(); var c = findClient(cl.dataset.copyLink); if (c) copy("Lien : " + LINKS[c.product] + "\nCode d'accès : " + c.code, "Lien et code copiés"); return; }
+      var row = e.target.closest("tr.row[data-code]"); if (row) { openClient(row.dataset.code); return; }
+      if (e.target.id === "modal" || e.target.id === "modal-close") { closeModal(); return; }
+      var ts = e.target.closest("[data-tpl-save]"); if (ts) { try { localStorage.setItem("daf.admin.tpl." + ts.dataset.tplSave, $("tpl-" + ts.dataset.tplSave).value); } catch (x) {} toast("Message enregistré."); return; }
+      var tr = e.target.closest("[data-tpl-reset]"); if (tr) { try { localStorage.removeItem("daf.admin.tpl." + tr.dataset.tplReset); } catch (x) {} $("tpl-" + tr.dataset.tplReset).value = TPL_DEFAULT[tr.dataset.tplReset]; toast("Texte par défaut rétabli."); return; }
+      var c2 = S.last;
+      if (e.target.id === "m-save" && c2) { api({ action: "update", code: c2.code, name: $("m-name").value, email: $("m-email").value, note: $("m-note").value, quota: $("m-quota").value }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Fiche enregistrée."); }); return; }
+      if (e.target.id === "m-extend" && c2) { api({ action: "extend", code: c2.code, months: $("m-months").value }).then(function (j) { if (!j.ok) return toast(j.error, true); closeModal(); refresh().then(function () { show("new"); var c = j.client; c.limit = c.quota || (c.product === "perso" ? S.ov.config.quotaPerso : S.ov.config.quotaPro); S.last = c; $("n-code").textContent = c.code; $("n-meta").textContent = PRODUCT[c.product] + " · " + (c.name || c.tag) + " · valable jusqu'au " + fmtDate(c.expires) + " · remplace " + c2.code; $("n-msg").value = message(c); $("n-mailto").hidden = !c.email; if (c.email) $("n-mailto").href = "mailto:" + c.email + "?body=" + encodeURIComponent(message(c)); $("n-result").hidden = false; toast("Nouveau code émis, l'ancien est révoqué."); }); }); return; }
+      if (e.target.id === "m-revoke" && c2) { if (!window.confirm("Révoquer l'accès de " + (c2.name || c2.tag) + " ? L'outil refusera ce code immédiatement.")) return; api({ action: "revoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès révoqué."); }); return; }
+      if (e.target.id === "m-unrevoke" && c2) { api({ action: "unrevoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès réactivé."); }); return; }
+      if (e.target.id === "m-delete" && c2) { if (!window.confirm("Supprimer " + (c2.name || c2.tag) + " ? Le code est révoqué et la fiche retirée. Définitif.")) return; api({ action: "delete", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Client supprimé."); }); return; }
+      if (e.target.id === "m-import" && c2) { closeModal(); show("new"); $("i-code").value = c2.code; $("i-name").value = c2.name || ""; $("i-code").focus(); return; }
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
+    $("f-product").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.fp = b.dataset.p; document.querySelectorAll("#f-product button").forEach(function (x) { x.classList.toggle("on", x === b); }); renderClients(); });
+    $("f-status").addEventListener("change", function () { S.fs = $("f-status").value; renderClients(); });
+    $("f-search").addEventListener("input", function () { S.fq = $("f-search").value.trim(); renderClients(); });
+    $("btn-mint").addEventListener("click", mintNew);
+    $("n-product").addEventListener("change", function () { $("n-months").value = $("n-product").value === "perso" ? "1" : "12"; });
+    $("n-copy-link").addEventListener("click", function () { if (S.last) copy(LINKS[S.last.product], "Lien copié"); });
+    $("btn-import").addEventListener("click", importCode);
+    $("btn-check").addEventListener("click", checkCode);
+    $("c-code").addEventListener("keydown", function (e) { if (e.key === "Enter") checkCode(); });
+    $("a-product").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.ap = b.dataset.p; document.querySelectorAll("#a-product button").forEach(function (x) { x.classList.toggle("on", x === b); }); renderEvents(); });
+    $("a-errors").addEventListener("change", function () { S.aerr = $("a-errors").checked; renderEvents(); });
+  }
+
+  function init() {
+    bind();
+    try { var k = sessionStorage.getItem("daf.admin"); if (k) { $("admin-key").value = k; login(); } } catch (e) {}
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })();
 </script>
 </body>

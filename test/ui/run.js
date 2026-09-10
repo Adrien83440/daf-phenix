@@ -3,11 +3,15 @@
 //   npm install --no-save jsdom      (une fois ; jsdom n'est pas une dépendance du projet)
 //   npm run test:ui
 //
-// Deux parcours sont joués par des pilotes injectés dans la page :
-//   parcours-complet.js        premier lancement → code → consentement → objectif → bilan complet → espace → historique → RGPD → effacement
-//   parcours-rechargement.js   état existant (deux bilans) → espace avec évolution → saisie manuelle → analyse simple → « Autre analyse »
-// L'API /api/perso est remplacée par test/ui/mock-api.js.
+// Trois parcours sont joués par des pilotes injectés dans la page :
+//   parcours-complet.js        perso.html : premier lancement → code → consentement → objectif → bilan complet → espace → historique → RGPD → effacement
+//   parcours-rechargement.js   perso.html : état existant (deux bilans) → espace avec évolution → saisie manuelle → analyse simple → « Autre analyse »
+//   parcours-admin.js          admin.html : connexion → tableau de bord → nouvel accès → usage réel → fiche, révocation, prolongation → activité → liens → réglages
+// Pour perso.html, l'API /api/perso est remplacée par test/ui/mock-api.js. Pour admin.html, les vraies fonctions
+// (api/admin.js, api/daf.js, api/perso.js) tournent dans le processus, sur le stockage mémoire, avec l'IA simulée.
 "use strict";
+process.env.ANTHROPIC_API_KEY = "test-key"; process.env.DAF_ACCESS_SECRET = "secret-de-test"; process.env.DAF_ADMIN_KEY = "admin-test";
+process.env.DAF_DAILY_QUOTA = "10"; process.env.PERSO_DAILY_QUOTA = "5"; delete process.env.KV_REST_API_URL; delete process.env.KV_REST_API_TOKEN;
 const fs = require("fs"), path = require("path");
 let JSDOM, VirtualConsole;
 try { ({ JSDOM, VirtualConsole } = require("jsdom")); }
@@ -15,7 +19,24 @@ catch (e) { console.error("jsdom manquant : lance d'abord  npm install --no-save
 
 const ROOT = path.join(__dirname, "..", "..");
 const mock = require("./mock-api.js");
-const html = fs.readFileSync(path.join(ROOT, "perso.html"), "utf8").replace(/<link[^>]+fonts[^>]*>/g, "");
+const pages = {};
+function page(name) { return pages[name] || (pages[name] = fs.readFileSync(path.join(ROOT, name), "utf8").replace(/<link[^>]+fonts[^>]*>/g, "")); }
+
+// Fonctions serveur réelles pour le scénario console (IA simulée par un fetch Node).
+const handlers = { "/api/admin": require(path.join(ROOT, "api", "admin.js")), "/api/daf": require(path.join(ROOT, "api", "daf.js")), "/api/perso": require(path.join(ROOT, "api", "perso.js")) };
+global.fetch = async function (url, opts) {
+  const body = JSON.parse(opts.body), schema = body.output_config.format.schema;
+  const vide = s => { if (s.type === "array") return []; if (s.type === "object") { const o = {}; Object.keys(s.properties).forEach(k => { o[k] = vide(s.properties[k]); }); return o; } if (s.enum) return s.enum[0]; if (s.type === "number" || s.type === "integer") return 0; return "x"; };
+  return { ok: true, json: async () => ({ stop_reason: "end_turn", content: [{ type: "text", text: JSON.stringify(vide(schema)) }], usage: { input_tokens: 2000, output_tokens: 800, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 } }) };
+};
+function serverFetch(url, opts) {
+  const fn = handlers[String(url).replace(/^https?:\/\/[^/]+/, "")];
+  if (!fn) return Promise.reject(new Error("route inconnue : " + url));
+  return new Promise(resolve => {
+    const res = { statusCode: 200, setHeader() {}, status(s) { this.statusCode = s; return this; }, end(t) { resolve({ status: this.statusCode, text: () => Promise.resolve(t) }); } };
+    fn({ method: "POST", body: JSON.parse(opts.body), headers: { "x-forwarded-for": "10.9.9." + Math.floor(Math.random() * 250) }, socket: {} }, res);
+  });
+}
 
 function etatPrecharge() {
   // Deux bilans complets (audit 52 puis 60), un objectif, une résiliation.
@@ -26,16 +47,17 @@ function etatPrecharge() {
   return { v: 1, code: "PXP-TEST", label: "TEST", product: "perso", consentAt: "2026-07-01T10:00:00.000Z", mode: "paste", text: "", form: { dettes: [], cats: {} }, ctx: { prenom: "sam", situation: "seul" }, checks: {}, history: [run("R2", 35, 60), run("R1", 70, 52)], goals: [{ id: "G1", nom: "Vacances", cible: 1200, deja: 300, date: "2027-06-01" }], cancelled: { "prlv basic fit": { montant: 29.99 } }, coussin: 3 };
 }
 
-function scenario(name, driverFile, mode) {
+function scenario(name, driverFile, mode, file) {
+  const html = page(file || "perso.html");
   return new Promise(resolve => {
     const errors = [];
     const vc = new VirtualConsole();
     vc.on("jsdomError", e => { if (!/not implemented/i.test(e.message)) errors.push("jsdomError: " + e.message); });
     vc.on("error", (...a) => errors.push("console.error: " + a.join(" ")));
     const dom = new JSDOM(html, {
-      url: "http://localhost/perso?mode=" + mode, runScripts: "dangerously", pretendToBeVisual: true, virtualConsole: vc,
+      url: "http://localhost/" + (file ? file.replace(/\.html$/, "") : "perso") + "?mode=" + mode, runScripts: "dangerously", pretendToBeVisual: true, virtualConsole: vc,
       beforeParse(window) {
-        window.fetch = (url, opts) => Promise.resolve({ status: 200, text: () => Promise.resolve(JSON.stringify(mock.respond(JSON.parse(opts.body)))) });
+        window.fetch = mode === "admin" ? serverFetch : (url, opts) => Promise.resolve({ status: 200, text: () => Promise.resolve(JSON.stringify(mock.respond(JSON.parse(opts.body)))) });
         window.URL.createObjectURL = () => "blob:local"; window.URL.revokeObjectURL = () => {};
         window.scrollTo = () => {}; window.print = () => {};
         if (mode === "reload") window.localStorage.setItem("phenix.perso.v1", JSON.stringify(etatPrecharge()));
@@ -68,5 +90,6 @@ function scenario(name, driverFile, mode) {
 (async () => {
   const a = await scenario("Parcours complet", "parcours-complet.js", "full");
   const b = await scenario("Rechargement, saisie manuelle, analyse simple", "parcours-rechargement.js", "reload");
-  process.exit(a && b ? 0 : 1);
+  const c = await scenario("Console d'administration", "parcours-admin.js", "admin", "admin.html");
+  process.exit(a && b && c ? 0 : 1);
 })();

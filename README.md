@@ -11,10 +11,12 @@ Site statique (Liquid Glass) + fonctions Vercel qui parlent à Claude Sonnet 5. 
 daf-phenix/
 ├── index.html      l'outil Pro (accès par code, données, lecture IA, 5 analyses, résultats, PDF, historique)
 ├── perso.html      l'outil Perso (accès par code, consentement, espace perso, bilan, 5 analyses, mes données)
-├── admin.html      ta page pour débloquer un client Pro ou un abonné Perso (génère un code d'accès)
+├── admin.html      la console : tableau de bord, clients Pro et Perso, accès, activité, coût, liens et messages
 ├── api/daf.js      fonction serveur Pro : codes PHX, quotas, prompts, appel IA (partagé)
 ├── api/perso.js    fonction serveur Perso : codes PXP, quotas, prompts particuliers, cadre légal
-├── test/           tests de la fonction Perso (node --test) et tests d'interface (jsdom)
+├── api/admin.js    fonction serveur de la console (clients, accès, activité)
+├── lib/store.js    stockage partagé : Vercel KV / Upstash si configuré, sinon mémoire d'instance
+├── test/           tests des fonctions (node --test) et tests d'interface (jsdom)
 ├── vercel.json     durée max 300 s, région Paris, URLs propres (/admin, /perso)
 ├── package.json    minimal
 ├── CONFORMITE-PERSO.md   RGPD et cadre réglementaire du produit particuliers
@@ -38,17 +40,28 @@ daf-phenix/
    | `DAF_REVOKED` | non | identifiants de codes désactivés : `LECOMPTOIR,MARTIN` |
    | `DAF_ALLOW_ORIGIN` | non | origine autorisée si la page est servie depuis un autre domaine (Academy), `*` par défaut |
    | `DAF_BRIDGE_KEY` | non | clé partagée avec l'Academy : les requêtes qui la portent (en-tête `X-Daf-Bridge`) sautent le code d'accès, le quota et la limite IP, parce que l'Academy les gère elle-même |
+   | `KV_REST_API_URL`, `KV_REST_API_TOKEN` | non, recommandé | posées automatiquement quand tu rattaches une base Vercel KV (Upstash) au projet : clients, révocations, quotas et activité survivent aux redémarrages (voir [la console](#la-console-admin)) |
+   | `DAF_PRICE_IN`, `DAF_PRICE_OUT` | non | tarifs en dollars par million de jetons (défaut 2 et 10) pour l'estimation de coût de la console |
 
 4. **Redeploy** (Deployments → ⋯ → Redeploy) pour que les variables soient prises en compte.
 5. **Domaine** : Settings → Domains, par exemple `daf.adrienemily.com`. Vérifie avec `https://ton-domaine/api/daf` en POST `{"action":"ping"}` ou simplement en ouvrant `/admin`.
 
-## Débloquer un client
+## La console admin
 
-1. Ouvre `https://ton-domaine/admin`, entre la clé admin.
-2. Nom du client + durée (1 à 24 mois) → **Générer le code**.
-3. Copie le message prêt à envoyer (lien + code). Le client entre le code une seule fois, il reste enregistré sur son appareil.
+`https://ton-domaine/admin`, clé `DAF_ADMIN_KEY`. Six onglets :
 
-Le code a la forme `PHX-LECOMPTOIR-2709-K7QM3XZ2` : identifiant client, mois d'expiration (fin de mois), signature. Il est vérifié par calcul, sans base : rien à stocker, rien à synchroniser. Pour couper un accès avant terme, ajoute l'identifiant à `DAF_REVOKED` et redéploie.
+- **Tableau de bord** : santé (clé API, secret, stockage, région), analyses et coût du jour, des 7 et 30 derniers jours, coût moyen par analyse, erreurs IA, graphique 30 jours Pro / Perso, clients actifs et qui expirent bientôt, dernière activité.
+- **Clients** : tous les accès Pro et Perso avec statut (actif, expire bientôt, expiré, révoqué, remplacé), date d'expiration, bilans du jour sur quota, analyses et appels cumulés, coût, dernier usage. Filtres par produit et statut, recherche. Un clic ouvre la fiche : nom, e-mail, note, quota personnalisé, message prêt à envoyer, **prolonger** (nouveau code, l'ancien est révoqué), **révoquer / réactiver** (effet immédiat), **supprimer**. Les codes vus dans l'activité mais jamais enregistrés (Academy, codes fixes, codes émis avant la console) apparaissent comme « non enregistrés » et peuvent être enregistrés.
+- **Nouvel accès** : produit, nom, durée, e-mail, quota, note → code, lien, message et bouton e-mail. Aussi : enregistrer un code existant, vérifier un code.
+- **Activité** : un événement par appel IA (client, lecture ou module, réussite ou échec, durée, jetons, coût), filtres, et le détail jour par jour.
+- **Liens et messages** : les trois adresses à fournir (`/` pour les dirigeants, `/perso` pour les particuliers, `/admin` pour toi) et les modèles de message par produit, modifiables (variables `{nom}`, `{code}`, `{lien}`, `{expiration}`, `{quota}`), gardés dans ton navigateur.
+- **Réglages** : état des variables d'environnement, listes de révocation et codes fixes, tarifs retenus, guide de branchement du stockage.
+
+**Stockage.** Sans base, la console ne voit que ce qui s'est passé depuis le dernier démarrage de la fonction, et une révocation faite ici ne tient que jusqu'au prochain redémarrage. Pour que tout soit conservé : sur Vercel, Storage → Create Database → **KV** (Upstash), rattache-la au projet, redéploie. Les deux variables sont posées automatiquement, rien d'autre à installer, et `lib/store.js` bascule seul. Les outils Pro et Perso fonctionnent dans les deux cas, et continuent de fonctionner en mémoire si KV tombe en panne.
+
+**Codes.** `PHX-LECOMPTOIR-2709-K7QM3XZ2` (Pro) ou `PXP-MARIE-2710-…` (Perso) : identifiant, mois d'expiration (fin de mois), signature. Vérifiés par calcul : un code reste valable même si la base est vide, et un code Pro ouvre aussi l'espace Perso. Révocation : depuis la console (immédiate, conservée avec KV) ou par les variables `DAF_REVOKED` / `PERSO_REVOKED` (identifiant entre le préfixe et la date, redéploiement nécessaire). Quota par défaut `DAF_DAILY_QUOTA` / `PERSO_DAILY_QUOTA`, ou personnalisé par client depuis sa fiche.
+
+**API de la console** (`POST /api/admin`, `adminKey` dans le corps ou en-tête `X-Admin-Key`) : `overview`, `clients`, `events`, `mint {product, name, months, email, note, quota}`, `import {code, name, email, note}`, `update {code, name, email, note, quota}`, `extend {code, months}`, `revoke {code}`, `unrevoke {code}`, `delete {code}`, `verify {code}`. Les fonctions `/api/daf` et `/api/perso` gardent leur action `mint` (même clé) pour un scénario Make après paiement : le code émis est enregistré dans la console avec `email` et `note` s'ils sont fournis.
 
 ## Ce que fait l'outil
 
@@ -65,7 +78,7 @@ Sonnet 5 : 2 $ par million de tokens en entrée, 10 $ en sortie. Un audit comple
 
 ## Limites à connaître
 
-- **Quota et anti-abus en mémoire d'instance** : protection souple (une instance Vercel qui redémarre repart de zéro). Suffisant pour un produit vendu à l'unité ; passer par une base si tu vends en volume.
+- **Sans Vercel KV, quotas et activité en mémoire d'instance** : protection souple (une instance qui redémarre repart de zéro). Rattache une base KV dès que tu vends en volume ou que tu veux une console fiable ; la limite par IP reste en mémoire dans tous les cas.
 - **Corps de requête Vercel limité à 4,5 Mo** : d'où la limite à 3,5 Mo de fichiers. Les photos sont recompressées côté client (1 800 px, JPEG).
 - **HEIC (photos iPhone)** : non lisible dans tous les navigateurs ; une capture d'écran fonctionne toujours.
 - **Polices Google** (Fraunces, Inter) chargées en ligne ; repli système sinon.
@@ -89,13 +102,13 @@ La version grand public : un directeur financier personnel qui lit un relevé de
 | `PERSO_ACCESS_CODES` | codes fixes : `ESSAI:Offre essai:2026-12-31` |
 | `PERSO_REVOKED` | identifiants de codes Perso désactivés : `DUPONT,MARTIN` |
 
-**Codes** : `PXP-MARIE-2710-K7QM3XZ2`, générés depuis `/admin` (choisir « Phénix Perso ») ou par `POST /api/perso` `{"action":"mint","adminKey":"…","name":"Marie","months":1}`. Signés avec le même secret mais dans un espace distinct : un code Perso n'ouvre pas l'outil Pro ; un code Pro ouvre aussi l'espace Perso (bonus client entreprise). Le message prêt à envoyer pointe vers `/perso`.
+**Codes** : `PXP-MARIE-2710-K7QM3XZ2`, générés depuis la console (« Nouvel accès », produit Phénix Perso) ou par `POST /api/perso` `{"action":"mint","adminKey":"…","name":"Marie","months":1,"email":"…"}`. Signés avec le même secret mais dans un espace distinct : un code Perso n'ouvre pas l'outil Pro ; un code Pro ouvre aussi l'espace Perso (bonus client entreprise). Le message prêt à envoyer pointe vers `/perso`.
 
 **Abonnement** : rien n'est branché. Le plus simple avec l'existant : un lien de paiement Stripe en abonnement mensuel, un scénario Make qui à chaque `invoice.paid` appelle `mint` avec `months: 2` (un mois de marge) et envoie le code par ActiveCampaign ; à `customer.subscription.deleted`, ajoute l'identifiant à `PERSO_REVOKED`. L'abonné n'a jamais à ressaisir un code tant qu'il paie : la page vérifie le code à chaque ouverture et n'affiche l'écran de code que s'il est refusé.
 
 **Personnaliser** : éditeur, contact et date de la politique de confidentialité dans `window.PERSO_CONFIG` en tête de `perso.html` (`editeur`, `contact`, `privacyDate`) ; ces trois valeurs sont à renseigner avant la mise en ligne.
 
-**Tests** : `npm test` (fonction serveur, IA simulée) et `npm run test:ui` (deux parcours complets de `perso.html` dans jsdom : `npm install --no-save jsdom` une fois).
+**Tests** : `npm test` (fonctions Pro, Perso, console et stockage, IA et KV simulés) et `npm run test:ui` (trois parcours dans jsdom : deux sur `perso.html`, un sur la console avec les vraies fonctions ; `npm install --no-save jsdom` une fois).
 
 ## Intégration Academy
 
