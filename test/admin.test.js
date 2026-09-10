@@ -117,8 +117,11 @@ test("prolongation : nouveau code, ancien remplacé et révoqué, fiche conserv�
 });
 
 test("update, import d'un code existant, verify, delete", async function () {
-  let r = await A({ action: "update", code: codePro, note: "VIP", quota: 20 });
-  assert.equal(r.json.client.note, "VIP"); assert.equal(r.json.client.quota, 20);
+  let r = await A({ action: "update", code: codePro, note: "VIP", quota: 20, premium: true });
+  assert.equal(r.json.client.note, "VIP"); assert.equal(r.json.client.quota, 20); assert.equal(r.json.client.premium, true);
+  assert.equal((await call(perso, { action: "verify", code: codePro })).json.premium, true, "un client Pro premium a l'assistant sur Perso");
+  r = await A({ action: "update", code: codePro, premium: false });
+  assert.equal(r.json.client.premium, false);
   assert.deepEqual((await call(daf, { action: "verify", code: codePro })).json.quota, { used: 0, limit: 20 });
 
   const old = daf._internal.mintCode("Ancien Client", 3).code;

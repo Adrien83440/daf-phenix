@@ -139,6 +139,30 @@
       ok(/Nouveau boulot/.test($("card-situ").textContent), "situation : mise à jour, version précédente gardée");
       var st = JSON.parse(localStorage.getItem("phenix.perso.v1")).ctx;
       ok(st.historique_situation.length === 1 && /Je vis seul à Lyon/.test(st.historique_situation[0].texte) && st.historique_situation[0].date, "persistance : historique de situation daté");
+      // Phénix en direct (texte, pas de micro dans jsdom)
+      ok(!$("btn-live").hidden && /Parler à Phénix/.test($("card-live").textContent), "en direct : accès Premium visible");
+      $("btn-live-open").click();
+      await wait(function () { return !$("jarvis").hidden; });
+      ok(/Salut Sam/.test($("jv-reply").textContent), "en direct : accueil par le prénom");
+      ok($("jv-mic").disabled && !$("jv-type").hidden, "en direct : sans reconnaissance vocale, le mode écrit s'ouvre seul");
+      setVal("jv-input", "Je viens de changer de travail, 2 400 net"); click("jv-send");
+      await wait(function () { return /Bravo pour le nouveau poste/.test($("jv-reply").textContent); });
+      ok(/changer de travail/.test($("jv-said").textContent), "en direct : ce que j'ai dit reste affiché");
+      ok(!$("jv-change").hidden && /Nouveau travail à 2 400/.test($("jv-change-txt").textContent), "en direct : situation mise à jour annoncée");
+      var st2 = JSON.parse(localStorage.getItem("phenix.perso.v1")).ctx;
+      ok(/Nouveau travail à 2 400 € net/.test(st2.situation_texte) && st2.historique_situation.length === 2 && st2.objectif === "Constituer une épargne de sécurité", "en direct : situation, historique et objectif enregistrés");
+      ok(!$("jv-action").hidden && /virement de 100/.test($("jv-action-txt").textContent), "en direct : action proposée");
+      click("jv-action-add"); await wait(function () { return $("jv-action").hidden; });
+      ok(JSON.parse(localStorage.getItem("phenix.perso.v1")).actionsPerso.length === 1, "en direct : action ajoutée à la semaine");
+      click("jv-undo");
+      st2 = JSON.parse(localStorage.getItem("phenix.perso.v1")).ctx;
+      ok(/Nouveau boulot depuis septembre/.test(st2.situation_texte) && st2.historique_situation.length === 1, "en direct : annulation rétablit la situation précédente");
+      setVal("jv-input", "Je suis fatigué"); click("jv-send");
+      await wait(function () { return /Qu'est-ce qui te pèse/.test($("jv-reply").textContent); });
+      ok($("jv-change").hidden, "en direct : pas de mise à jour pour une simple humeur");
+      ok(JSON.parse(localStorage.getItem("phenix.perso.v1")).vocal.turns.length === 4, "en direct : conversation gardée");
+      click("jv-close"); await wait(function () { return $("jarvis").hidden && on("home"); });
+      ok(/virement de 100/.test($("card-week").textContent), "espace : l'action proposée apparaît dans la semaine");
       // résiliation d'un abonnement
       document.querySelector('#subs button[data-sub]').click();
       await wait(function () { return /Libéré grâce à toi/.test($("home-grid").textContent); });
@@ -149,8 +173,8 @@
       ok(true, "espace : cible d'épargne modifiable");
       // cocher une action depuis l'espace
       var chk = $("home-grid").querySelector("input[data-check]"); chk.click();
-      await wait(function () { return /2 \/ 3/.test($("home-grid").textContent); });
-      ok(true, "espace : action cochée depuis l'espace (2 / 3)");
+      await wait(function () { return /2 \/ 4/.test($("home-grid").textContent); });
+      ok(true, "espace : action cochée depuis l'espace (2 / 4, avec l'action proposée en direct)");
       // historique
       click("btn-home-hist");
       await wait(function () { return on("hist"); });

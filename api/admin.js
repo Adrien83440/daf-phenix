@@ -73,7 +73,7 @@ function mint(product, name, months) { return product === "perso" ? X.mintCode(n
 function newRecord(product, m, body, source) {
   return {
     code: m.code, product: product, tag: m.label, name: String(body.name || "").trim().slice(0, 80), email: String(body.email || "").trim().slice(0, 120),
-    note: String(body.note || "").trim().slice(0, 500), quota: parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0,
+    note: String(body.note || "").trim().slice(0, 500), quota: parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0, premium: body.premium === true || body.premium === "1" || body.premium === "true",
     months: parseInt(body.months, 10) || (product === "perso" ? 1 : 12), created: new Date().toISOString(), expires: m.expires, source: source
   };
 }
@@ -237,6 +237,7 @@ module.exports = async function handler(req, res) {
       const upd = clean(body, ["name", "email", "note"]);
       if (upd.email !== undefined) upd.email = auth.normEmail(upd.email);
       if (body.quota !== undefined) upd.quota = parseInt(body.quota, 10) > 0 ? parseInt(body.quota, 10) : 0;
+      if (body.premium !== undefined) upd.premium = body.premium === true || body.premium === "1" || body.premium === "true";
       if (rec.passwordHash && upd.email !== undefined && !accounts.validEmail(upd.email)) { send(res, 400, { ok: false, error: "Ce client a un compte : l'adresse e-mail doit rester valide." }); return; }
       const next = await store.saveClient(Object.assign({}, rec, upd));
       await accounts.moveLogin(rec, next);

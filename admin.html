@@ -104,6 +104,13 @@ td .sub{display:block;font-size:11.5px;color:var(--ink3)}
 .code{margin-top:14px;padding:16px;border-radius:var(--r2);background:linear-gradient(160deg,rgba(220,168,78,.18),rgba(232,114,44,.08));border:1px solid rgba(220,168,78,.4);text-align:center}
 .code b{display:block;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:20px;letter-spacing:.06em;word-break:break-all;font-weight:500}
 .code small{display:block;color:var(--ink2);margin-top:6px;font-size:13px}
+.agree{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:var(--r2);cursor:pointer;background:var(--fill);border:1px solid var(--line);font-size:14px;line-height:1.45}
+.agree input{position:absolute;opacity:0;width:0;height:0}
+.agree .box{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--line2);flex:none;margin-top:1px;display:grid;place-items:center;transition:all .2s}
+.agree .box::after{content:"";width:11px;height:6px;border-left:2.5px solid #2A1B06;border-bottom:2.5px solid #2A1B06;transform:rotate(-45deg) translate(1px,-1px);opacity:0}
+.agree.on .box{background:linear-gradient(180deg,var(--gold2),var(--gold));border-color:transparent}
+.agree.on .box::after{opacity:1}
+.badge.prem{color:#C9B3F0;border-color:rgba(123,79,184,.55);background:rgba(123,79,184,.18)}
 .linkrow{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:var(--r2);margin-bottom:8px}
 .linkrow b{font-weight:500;min-width:140px}
 .linkrow span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink2)}
@@ -248,6 +255,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
             <div><label class="lbl" for="n-email"><span id="n-email-lbl">E-mail</span></label><input class="field" id="n-email" type="email" placeholder="identifiant de connexion"></div>
             <div><label class="lbl" for="n-quota">Quota par jour (vide = défaut)</label><input class="field" id="n-quota" inputmode="numeric" placeholder="défaut"></div>
           </div>
+          <label class="agree" id="n-premium-wrap" style="margin-top:12px"><input type="checkbox" id="n-premium"><span class="box"></span><span><b style="font-weight:500">Premium</b> · Phénix en direct (assistant vocal) activé pour cet accès</span></label>
           <label class="lbl" for="n-note">Note interne (facultatif)</label>
           <input class="field" id="n-note" placeholder="Offre de lancement, formation X, parrainage…" maxlength="500">
           <div class="err" id="n-err"></div>
@@ -582,7 +590,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     var head = "<tr><th>Client</th><th>Produit</th><th>Statut</th><th>Expire</th><th class=\"num\">Aujourd'hui</th><th class=\"num\">Analyses</th><th class=\"num\">Appels</th><th class=\"num\">Coût</th><th>Dernier usage</th><th></th></tr>";
     $("clients-table").innerHTML = list.length ? head + list.map(function (c) {
       var dl = daysLeft(c.expires), s = c.stats || {};
-      return '<tr class="row" data-code="' + esc(c.code) + '"><td><b style="font-weight:500">' + esc(c.name || c.tag || c.code) + '</b><span class="sub mono">' + esc(c.code) + "</span></td><td>" + badge(c.product, PRODUCT[c.product] || c.product) + (c.account ? ' <span class="badge ok" title="compte e-mail">@</span>' : "") + "</td><td>" + badge(c.status, STATUS[c.status] || c.status) + "</td><td>" + (c.expires ? esc(fmtDate(c.expires)) + '<span class="sub">' + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + "</span>" : "—") +
+      return '<tr class="row" data-code="' + esc(c.code) + '"><td><b style="font-weight:500">' + esc(c.name || c.tag || c.code) + '</b><span class="sub mono">' + esc(c.code) + "</span></td><td>" + badge(c.product, PRODUCT[c.product] || c.product) + (c.account ? ' <span class="badge ok" title="compte e-mail">@</span>' : "") + (c.premium ? ' <span class="badge prem" title="Premium">★</span>' : "") + "</td><td>" + badge(c.status, STATUS[c.status] || c.status) + "</td><td>" + (c.expires ? esc(fmtDate(c.expires)) + '<span class="sub">' + (dl < 0 ? "depuis " + (-dl) + " j" : "dans " + dl + " j") + "</span>" : "—") +
         '</td><td class="num">' + c.usedToday + " / " + c.limit + '</td><td class="num">' + n(s.runs) + '</td><td class="num">' + n(s.calls) + (s.errors ? '<span class="sub">' + s.errors + " échec(s)</span>" : "") + '</td><td class="num">' + usd(c.cost) + "</td><td>" + esc(ago(s.last_seen)) + (s.last_action ? '<span class="sub">' + esc(s.last_action) + "</span>" : "") + '</td><td><button class="btn ghost small" type="button" data-copy-link="' + esc(c.code) + '">Lien + code</button></td></tr>';
     }).join("") : '<tr><td class="hint" style="padding:22px;text-align:center">Aucun client ne correspond.</td></tr>';
     $("clients-hint").textContent = S.ov.config.store.backend === "kv" ? "" : "Sans stockage KV, cette liste ne contient que les codes émis ou utilisés depuis le dernier redémarrage de la fonction.";
@@ -602,6 +610,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       "<div><small>Dernier usage</small>" + (s.last_seen ? esc(fmtDate(s.last_seen, true)) + " (" + esc(s.last_action) + ")" : "jamais") + "</div>" + (c.replaces ? "<div><small>Remplace</small><span class=\"mono\">" + esc(c.replaces) + "</span></div>" : "") + (c.replacedBy ? "<div><small>Remplacé par</small><span class=\"mono\">" + esc(c.replacedBy) + "</span></div>" : "") + "</div>";
     if (reg) {
       html += '<div class="sec"><h3>Fiche</h3><div class="grid g2"><div><label class="lbl" for="m-name">Nom</label><input class="field" id="m-name" value="' + esc(c.name || "") + '"></div><div><label class="lbl" for="m-email">E-mail</label><input class="field" id="m-email" value="' + esc(c.email || "") + '"></div><div><label class="lbl" for="m-quota">Quota par jour (vide = défaut)</label><input class="field" id="m-quota" inputmode="numeric" value="' + esc(c.quota || "") + '"></div><div><label class="lbl" for="m-note">Note</label><input class="field" id="m-note" value="' + esc(c.note || "") + '"></div></div>' +
+        '<label class="agree' + (c.premium ? " on" : "") + '" id="m-premium-wrap" style="margin-top:10px"><input type="checkbox" id="m-premium"' + (c.premium ? " checked" : "") + '><span class="box"></span><span><b style="font-weight:500">Premium</b> · Phénix en direct (assistant vocal)</span></label>' +
         '<div class="btns" style="margin-top:10px"><button class="btn primary small" type="button" id="m-save">Enregistrer la fiche</button></div></div>';
       html += '<div class="sec"><h3>Compte de connexion</h3>' + (c.account ? '<p class="hint" style="margin:0 0 8px">' + esc(c.email) + (c.mustChange ? " · mot de passe provisoire, pas encore remplacé" : " · mot de passe choisi par la personne") + "</p>" : '<p class="hint" style="margin:0 0 8px">Pas de compte : la personne entre son code d\'accès.' + (c.email ? "" : " Renseigne un e-mail dans la fiche pour pouvoir en créer un.") + "</p>") +
         '<div class="btns">' + (accountsOk() && c.email ? '<button class="btn ghost small" type="button" id="m-reset-pw">' + (c.account ? "Nouveau mot de passe provisoire" : "Créer le compte (mot de passe provisoire)") + "</button>" : (accountsOk() ? "" : '<span class="hint" style="margin:0">Stockage KV requis pour les comptes.</span>')) + '</div><div id="m-reset-out" style="margin-top:10px"></div></div>';
@@ -624,7 +633,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
     var b = $("btn-mint"); b.disabled = true;
     var acc = $("n-access").value === "account" && !$("n-access").disabled;
     if (acc && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test($("n-email").value.trim())) { b.disabled = false; $("n-err").textContent = "Un compte demande une adresse e-mail valide."; return; }
-    api({ action: "mint", product: $("n-product").value, name: name, months: $("n-months").value, email: $("n-email").value.trim(), note: $("n-note").value.trim(), quota: $("n-quota").value.trim(), access: acc ? "account" : "code" }).then(function (j) {
+    api({ action: "mint", product: $("n-product").value, name: name, months: $("n-months").value, email: $("n-email").value.trim(), note: $("n-note").value.trim(), quota: $("n-quota").value.trim(), premium: $("n-premium").checked, access: acc ? "account" : "code" }).then(function (j) {
       b.disabled = false;
       if (!j.ok) { $("n-err").textContent = j.error || "Erreur."; return; }
       showNew(j.client, j.password || "", "");
@@ -729,7 +738,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       var ts = e.target.closest("[data-tpl-save]"); if (ts) { try { localStorage.setItem("daf.admin.tpl." + ts.dataset.tplSave, $("tpl-" + ts.dataset.tplSave).value); } catch (x) {} toast("Message enregistré."); return; }
       var tr = e.target.closest("[data-tpl-reset]"); if (tr) { try { localStorage.removeItem("daf.admin.tpl." + tr.dataset.tplReset); } catch (x) {} $("tpl-" + tr.dataset.tplReset).value = TPL_DEFAULT[tr.dataset.tplReset]; toast("Texte par défaut rétabli."); return; }
       var c2 = S.last;
-      if (e.target.id === "m-save" && c2) { api({ action: "update", code: c2.code, name: $("m-name").value, email: $("m-email").value, note: $("m-note").value, quota: $("m-quota").value }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Fiche enregistrée."); }); return; }
+      if (e.target.id === "m-save" && c2) { api({ action: "update", code: c2.code, name: $("m-name").value, email: $("m-email").value, note: $("m-note").value, quota: $("m-quota").value, premium: $("m-premium").checked }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Fiche enregistrée."); }); return; }
       if (e.target.id === "m-extend" && c2) { api({ action: "extend", code: c2.code, months: $("m-months").value }).then(function (j) { if (!j.ok) return toast(j.error, true); closeModal(); refresh().then(function () { show("new"); showNew(j.client, "", " · remplace " + c2.code); toast(j.client.account ? "Accès prolongé : la personne garde son e-mail et son mot de passe, rien à lui renvoyer." : "Nouveau code émis, l'ancien est révoqué."); }); }); return; }
       if (e.target.id === "m-revoke" && c2) { if (!window.confirm("Révoquer l'accès de " + (c2.name || c2.tag) + " ? L'outil refusera ce code immédiatement.")) return; api({ action: "revoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès révoqué."); }); return; }
       if (e.target.id === "m-unrevoke" && c2) { api({ action: "unrevoke", code: c2.code }).then(function (j) { if (!j.ok) return toast(j.error, true); afterChange("Accès réactivé."); }); return; }
@@ -738,6 +747,7 @@ window.ADMIN_CONFIG = { endpoint: "/api/admin" };
       if (e.target.id === "m-import" && c2) { closeModal(); show("new"); $("i-code").value = c2.code; $("i-name").value = c2.name || ""; $("i-code").focus(); return; }
     });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
+    document.addEventListener("change", function (e) { var w = e.target.closest(".agree"); if (w && e.target.type === "checkbox") w.classList.toggle("on", e.target.checked); });
     $("f-product").addEventListener("click", function (e) { var b = e.target.closest("button"); if (!b) return; S.fp = b.dataset.p; document.querySelectorAll("#f-product button").forEach(function (x) { x.classList.toggle("on", x === b); }); renderClients(); });
     $("f-status").addEventListener("change", function () { S.fs = $("f-status").value; renderClients(); });
     $("f-search").addEventListener("input", function () { S.fq = $("f-search").value.trim(); renderClients(); });

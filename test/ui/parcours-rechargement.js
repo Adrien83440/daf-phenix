@@ -33,6 +33,8 @@
       ok(/Résilié/.test(grid) && /Libéré grâce à toi/.test(grid), "espace : résiliation restituée");
       await wait(function () { return $("client-chip").textContent === "Sam"; });
       ok(true, "rechargement : vérification du code en arrière-plan, puce mise à jour");
+      await wait(function () { return $("btn-live-open"); });
+      ok(!$("btn-live").hidden && /Parler à Phénix/.test($("card-live").textContent), "en direct : déverrouillé après la vérification du compte (premium)");
 
       // saisie manuelle
       click("btn-home-bilan"); await wait(function () { return on("data"); });

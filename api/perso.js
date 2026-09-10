@@ -10,6 +10,8 @@
 //    PERSO_DAILY_QUOTA    bilans par jour et par code (défaut : 5 ; un bilan complet = 1)
 //    PERSO_ACCESS_CODES   codes fixes optionnels : "CODE:Libellé:2026-12-31,AUTRE:Libellé"
 //    PERSO_REVOKED        identifiants de codes Perso désactivés : "DUPONT,MARTIN"
+//    PERSO_VOCAL_QUOTA    tours de conversation vocale par jour et par compte (défaut : 40)
+//    PERSO_VOCAL_POUR_TOUS "1" pour ouvrir l'assistant vocal à tous les comptes (sinon fiche client premium)
 //
 //  Codes : "PXP-TAG-AAMM-SIGNATURE" (signés avec DAF_ACCESS_SECRET, espace de
 //  signature distinct des codes Pro). Un code Pro (PHX-…) valide est aussi
@@ -17,6 +19,7 @@
 //
 //  Actions (POST JSON) : verify | lecture | analyse | mint (admin) | ping
 //                        login | password (comptes e-mail + mot de passe, voir lib/accounts.js)
+//                        vocal (assistant conversationnel « Phénix en direct », Premium)
 //
 //  RGPD : la fonction ne journalise ni ne conserve les données reçues ; elles
 //  transitent vers l'API Anthropic le temps du calcul (voir CONFORMITE-PERSO.md).
@@ -27,6 +30,8 @@ const store = require("../lib/store.js");
 const accounts = require("../lib/accounts.js");
 
 const QUOTA = Math.max(1, parseInt(process.env.PERSO_DAILY_QUOTA || "5", 10) || 5);
+const VOCAL_QUOTA = Math.max(1, parseInt(process.env.PERSO_VOCAL_QUOTA || "40", 10) || 40);   // tours de conversation par jour
+const VOCAL_POUR_TOUS = process.env.PERSO_VOCAL_POUR_TOUS === "1";                            // ouvre l'assistant sans Premium (tests, lancement)
 const SECRET = process.env.DAF_ACCESS_SECRET || "";
 const ADMIN_KEY = process.env.DAF_ADMIN_KEY || "";
 const API_KEY = process.env.ANTHROPIC_API_KEY || "";
@@ -106,6 +111,12 @@ Remplis : score, progres (4 à 6 indicateurs avec avant, après, tendance et un 
 Laisse vides : fuites, opportunites, allocation, dettes, strategie_dettes, feuille_de_route, automatisations.`
 };
 
+const VOCAL_PROMPT = `Tu es en conversation orale avec la personne (assistant « Phénix en direct »). Elle te parle de sa situation, d'un problème, d'un changement ou d'une question d'argent du quotidien.
+Règles de l'oral : réponds en 2 à 4 phrases courtes, naturelles, à voix haute (pas de liste, pas de titre, pas de symbole, chiffres arrondis et dits simplement). Une seule question à la fois, seulement si elle est utile. Chaleureux, direct, jamais moralisateur. Le cadre légal ci-dessus s'applique mot pour mot : aucun placement, produit, crédit ou établissement recommandé.
+Mise à jour de la situation : si ce que dit la personne change durablement sa situation (revenus, logement, foyer, travail, dette soldée ou nouvelle, projet, objectif), réécris son paragraphe de situation en entier à la première personne, avec ses mots, en intégrant le changement (700 caractères au plus) dans "situation_maj", et résume le changement en une phrase dans "changement". Sinon laisse ces deux champs vides. Ne réécris pas pour une simple question ou une humeur passagère.
+Si un objectif prioritaire nouveau ressort clairement, mets-le dans "objectif" (parmi : Sortir du découvert, Constituer une épargne de sécurité, Rembourser mes dettes, Épargner pour un projet, Mieux vivre avec mon budget, Préparer l'avenir), sinon vide.
+Si une action concrète et faisable cette semaine découle de l'échange, propose-la dans "action_proposee" (action courte + impact), sinon laisse vide.`;
+
 // ---------------------------------------------------------------------------
 //  Schémas JSON (sortie structurée : toutes les propriétés sont requises)
 // ---------------------------------------------------------------------------
@@ -155,6 +166,14 @@ const RAPPORT_SCHEMA = obj({
   hypotheses: arr(S),
   questions: arr(S),
   mot_du_daf: { type: "string", description: "2 à 3 lignes, le mot de la fin du directeur financier personnel" }
+});
+
+const VOCAL_SCHEMA = obj({
+  reponse: { type: "string", description: "2 à 4 phrases à dire à voix haute" },
+  situation_maj: { type: "string", description: "paragraphe de situation réécrit, ou vide" },
+  changement: { type: "string", description: "une phrase, ou vide" },
+  objectif: { type: "string", enum: ["", "Sortir du découvert", "Constituer une épargne de sécurité", "Rembourser mes dettes", "Épargner pour un projet", "Mieux vivre avec mon budget", "Préparer l'avenir"] },
+  action_proposee: obj({ action: S, impact: S })
 });
 
 // Comme pour la version Pro : le schéma complet dépasse la taille acceptée en
@@ -240,10 +259,11 @@ function checkCode(raw) {
 // ---------------------------------------------------------------------------
 //  Quota (lib/store.js : Vercel KV si configuré, sinon mémoire d'instance)
 // ---------------------------------------------------------------------------
-async function quotaLimit(code) {
-  const c = await store.getClient(code);
+async function quotaLimit(code, rec) {
+  const c = rec === undefined ? await store.getClient(code) : rec;
   return c && parseInt(c.quota, 10) > 0 ? parseInt(c.quota, 10) : QUOTA;
 }
+function isPremium(rec) { return VOCAL_POUR_TOUS || !!(rec && rec.premium); }
 
 // ---------------------------------------------------------------------------
 //  Lecture et analyses
@@ -299,6 +319,18 @@ async function analyse(body) {
   return { data: rapportComplet(out.data), usage: out.usage };
 }
 
+async function vocal(body) {
+  const message = String(body.message || "").trim().slice(0, 1500);
+  if (!message) throw new Error("Je n'ai rien entendu. Redis-le moi ?");
+  const tours = (Array.isArray(body.tours) ? body.tours : []).slice(-8).map(function (t) { return { role: t && t.role === "assistant" ? "assistant" : "user", content: String((t && t.texte) || "").slice(0, 800) }; }).filter(function (t) { return t.content; });
+  const etat = body.etat && typeof body.etat === "object" ? body.etat : null;
+  const plan = Array.isArray(body.plan) ? body.plan.slice(0, 12).map(function (a) { return "- [" + (a.fait ? "fait" : "à faire") + "] " + String(a.action || "").slice(0, 160); }).join("\n") : "";
+  const fond = "Contexte de la personne :\n" + ctxText(body.context) + (etat ? "\n\nSa situation chiffrée au dernier bilan (JSON) :\n" + JSON.stringify(etat).slice(0, 12000) : "\n\n(Pas encore de bilan chiffré.)") + (plan ? "\n\nSon plan d'actions en cours :\n" + plan : "");
+  const messages = [{ role: "user", content: [{ type: "text", text: fond, cache_control: { type: "ephemeral" } }, { type: "text", text: VOCAL_PROMPT + "\n\nLa conversation commence." }] }, { role: "assistant", content: "D'accord, je t'écoute." }].concat(tours, [{ role: "user", content: message }]);
+  const out = await core.callClaudeMessages(messages, VOCAL_SCHEMA, 1200, SYSTEM, "low");
+  return out;
+}
+
 // ---------------------------------------------------------------------------
 //  Handler
 // ---------------------------------------------------------------------------
@@ -324,8 +356,8 @@ module.exports = async function handler(req, res) {
   if (core.rateLimited(ip)) { send(res, 429, { ok: false, error: "Trop de requêtes. Réessaie dans quelques minutes." }); return; }
 
   try {
-    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist() }); return; }
-    if (action === "login") { const r = await accounts.login(body, ip, checkCode); send(res, r.status, r.out); return; }
+    if (action === "ping") { send(res, 200, { ok: true, product: "perso", quota: QUOTA, configured: !!(API_KEY && SECRET && ADMIN_KEY), accounts: accounts.canPersist(), vocalPourTous: VOCAL_POUR_TOUS }); return; }
+    if (action === "login") { const r = await accounts.login(body, ip, checkCode); if (r.out.ok) r.out.premium = isPremium(await store.getClient(r.out.code)); send(res, r.status, r.out); return; }
     if (action === "password") { const r = await accounts.changePassword(body, ip); send(res, r.status, r.out); return; }
 
     if (action === "mint") {
@@ -340,10 +372,20 @@ module.exports = async function handler(req, res) {
     const access = checkCode(body.code);
     if (!access.ok) { send(res, 401, access); return; }
     if (await store.isRevoked(access.code)) { send(res, 401, { ok: false, error: "Cet accès a été désactivé." }); return; }
-    const limit = await quotaLimit(access.code);
+    const rec = await store.getClient(access.code);
+    const limit = await quotaLimit(access.code, rec);
 
     if (action === "verify") {
-      send(res, 200, { ok: true, label: access.label, expires: access.expires, product: access.product, quota: { used: await store.quotaUsed(access.code), limit: limit } });
+      send(res, 200, { ok: true, label: access.label, expires: access.expires, product: access.product, premium: isPremium(rec), quota: { used: await store.quotaUsed(access.code), limit: limit } });
+      return;
+    }
+
+    if (action === "vocal") {
+      if (!isPremium(rec)) { send(res, 403, { ok: false, error: "Phénix en direct fait partie de l'offre Premium." }); return; }
+      const c = await store.consumeRun("vocal", access.code + "~VOCAL", String(body.turnId || "").slice(0, 64), VOCAL_QUOTA);
+      if (!c.ok) { send(res, 429, { ok: false, error: "On a beaucoup parlé aujourd'hui : " + VOCAL_QUOTA + " échanges. On reprend demain ?", quota: { used: c.used, limit: c.limit } }); return; }
+      const out = await store.traced({ product: "perso", code: access.code, label: access.label, action: "vocal", module: "" }, function () { return vocal(body); });
+      send(res, 200, { ok: true, action: "vocal", result: out.data, usage: out.usage, quota: { used: c.used, limit: c.limit } });
       return;
     }
 
@@ -362,4 +404,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, precedentText: precedentText, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };
+module.exports._internal = { checkCode: checkCode, mintCode: mintCode, quotaLimit: quotaLimit, precedentText: precedentText, isPremium: isPremium, VOCAL_SCHEMA: VOCAL_SCHEMA, VOCAL_PROMPT: VOCAL_PROMPT, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, SYSTEM: SYSTEM, LECTURE_PROMPT: LECTURE_PROMPT, ctxText: ctxText, CATEGORIES: CATEGORIES, TYPES_DETTE: TYPES_DETTE, QUOTA: QUOTA };

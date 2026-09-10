@@ -218,6 +218,35 @@ test("bilan du mois : bilan précédent transmis, schéma dédié, refus sans pr
   assert.deepEqual(r.json.result.fuites, []);
 });
 
+test("Phénix en direct : réservé au premium, conversation multi-tours, situation mise à jour", async function () {
+  const store = require("../lib/store.js");
+  const code = P.mintCode("Vocal", 1).code;
+  await store.saveClient({ code: code, product: "perso", tag: "VOCAL", name: "Sam", premium: false });
+  let r = await call({ action: "vocal", code: code, turnId: "T1", message: "Je viens de changer de travail." });
+  assert.equal(r.status, 403); assert.match(r.json.error, /Premium/);
+  await store.saveClient({ code: code, product: "perso", tag: "VOCAL", name: "Sam", premium: true });
+  r = await call({ action: "verify", code: code });
+  assert.equal(r.json.premium, true, "verify annonce le premium");
+  replyWith({ reponse: "Bravo pour le nouveau poste. On met ta situation à jour ?", situation_maj: "Je viens de changer de travail, 2 400 € net.", changement: "Nouveau travail à 2 400 € net.", objectif: "Constituer une épargne de sécurité", action_proposee: { action: "Programmer un virement de 100 €", impact: "Sécurité en 12 mois" } });
+  r = await call({ action: "vocal", code: code, turnId: "T1", message: "Je viens de changer de travail, je gagne 2 400 maintenant.", tours: [{ role: "user", texte: "Salut" }, { role: "assistant", texte: "Salut Sam, je t'écoute." }], context: { prenom: "Sam", situation_texte: "Au chômage, 1 300 €." }, etat: { revenus_mensuels: 1300 }, plan: [{ action: "Résilier la salle", fait: true }] });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  assert.equal(r.json.result.situation_maj, "Je viens de changer de travail, 2 400 € net.");
+  assert.equal(lastRequest.output_config.effort, "low"); assert.equal(lastRequest.max_tokens, 1200);
+  assert.deepEqual(lastRequest.output_config.format.schema, P.VOCAL_SCHEMA);
+  const msgs = lastRequest.messages;
+  assert.equal(msgs.length, 5, "fond + accusé + 2 tours + message");
+  assert.match(msgs[0].content[0].text, /Au chômage, 1 300/); assert.match(msgs[0].content[0].text, /\[fait\] Résilier la salle/);
+  assert.match(msgs[0].content[1].text, /conversation orale/);
+  assert.equal(msgs[2].role, "user"); assert.equal(msgs[3].role, "assistant"); assert.equal(msgs[4].content, "Je viens de changer de travail, je gagne 2 400 maintenant.");
+  assert.deepEqual(r.json.quota, { used: 1, limit: 40 });
+  r = await call({ action: "vocal", code: code, turnId: "T1", message: "x" });
+  assert.deepEqual(r.json.quota, { used: 1, limit: 40 }, "même tour : pas de consommation");
+  r = await call({ action: "vocal", code: code, turnId: "T2", message: "   " });
+  assert.equal(r.status, 500); assert.match(r.json.error, /rien entendu/);
+  // le quota des bilans n'est pas touché par la conversation
+  assert.deepEqual((await call({ action: "verify", code: code })).json.quota, { used: 0, limit: 2 });
+});
+
 test("refus et réponse illisible de l'IA remontent en erreur lisible", async function () {
   const code = P.mintCode("Erreurs", 1).code;
   nextReply = { stop_reason: "refusal", content: [] };

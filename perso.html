@@ -484,6 +484,40 @@ select.field option{color:#111;background:#fff}
 .situ-card::before{content:"“";color:var(--gold2);font-size:26px;line-height:0;margin-right:4px}
 .situ-meta{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin-top:10px;font-size:12.5px;color:var(--ink3)}
 .situ-empty{padding:14px 16px;border-radius:var(--r2);border:1px dashed var(--line2);color:var(--ink2);font-size:14px;line-height:1.5}
+/* ---- Phénix en direct ---- */
+.jv{position:fixed;inset:0;z-index:80;background:radial-gradient(120% 80% at 50% 45%,#1A1225 0%,#0B0910 70%);color:var(--ink);display:flex;flex-direction:column;overflow:hidden}
+.jv canvas{position:absolute;inset:0;width:100%;height:100%}
+.jv-top,.jv-mid,.jv-bottom{position:relative;z-index:1}
+.jv-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px}
+.jv-brand{font-family:var(--serif);font-size:20px;letter-spacing:.01em}.jv-brand em{font-style:normal;color:var(--gold2)}
+.jv-state{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.jv-state i{width:8px;height:8px;border-radius:50%;background:var(--ink3);box-shadow:0 0 12px currentColor}
+.jv.listening .jv-state i{background:var(--gold2);color:var(--gold2)}.jv.thinking .jv-state i{background:#C9B3F0;color:#C9B3F0;animation:pulse 1.1s ease-in-out infinite}.jv.speaking .jv-state i{background:var(--ember);color:var(--ember)}
+.jv-close{border:1px solid var(--line);background:var(--fill2);color:var(--ink);border-radius:999px;width:38px;height:38px;cursor:pointer;font-size:20px;line-height:1}
+.jv-mid{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;text-align:center;padding:0 22px 8px;gap:10px;max-width:760px;margin:0 auto;width:100%}
+.jv-said{font-size:15px;color:var(--ink3);min-height:22px;line-height:1.45}
+.jv-said::before{content:"— ";color:var(--gold2)}.jv-said:empty::before{content:""}
+.jv-reply{font-family:var(--serif);font-size:22px;line-height:1.4;min-height:30px;text-shadow:0 0 30px rgba(220,168,78,.25)}
+.jv-change,.jv-action{display:flex;align-items:center;gap:10px;padding:9px 14px;border-radius:999px;font-size:13.5px;background:rgba(143,217,168,.12);border:1px solid rgba(143,217,168,.35);color:var(--ok)}
+.jv-change svg{width:16px;height:16px;flex:none}
+.jv-action{background:rgba(220,168,78,.12);border-color:rgba(220,168,78,.4);color:var(--ink)}
+.jv-bottom{display:flex;flex-direction:column;align-items:center;gap:8px;padding:8px 18px calc(22px + env(safe-area-inset-bottom))}
+.jv-mic{width:78px;height:78px;border-radius:50%;border:1.5px solid rgba(220,168,78,.6);background:radial-gradient(circle at 50% 35%,rgba(220,168,78,.35),rgba(220,168,78,.08) 70%);color:var(--gold2);cursor:pointer;display:grid;place-items:center;box-shadow:0 0 0 0 rgba(220,168,78,.35);transition:transform .15s,box-shadow .3s}
+.jv-mic svg{width:30px;height:30px}
+.jv-mic:active{transform:scale(.96)}
+.jv.listening .jv-mic{box-shadow:0 0 0 14px rgba(220,168,78,.18),0 0 40px rgba(220,168,78,.35);border-color:var(--gold2)}
+.jv.thinking .jv-mic,.jv.speaking .jv-mic{opacity:.55}
+.jv-mic:disabled{opacity:.35;cursor:default}
+.jv-hint{font-size:13px;color:var(--ink3);min-height:18px}
+.jv-type{display:flex;gap:8px;width:100%;max-width:560px}
+.jv-type .field{flex:1;padding:12px 14px;border-radius:999px}
+.jv-alt{color:var(--ink3);font-size:13px;text-decoration:none}
+.live-card .orb{width:92px;height:92px;border-radius:50%;flex:none;background:radial-gradient(circle at 50% 40%,#F6D98A 0%,#E8722C 35%,#7B4FB8 70%,transparent 72%);box-shadow:0 0 40px rgba(232,114,44,.45),0 0 90px rgba(123,79,184,.35);animation:orb 3.2s ease-in-out infinite}
+@keyframes orb{50%{transform:scale(1.06);box-shadow:0 0 60px rgba(232,114,44,.6),0 0 120px rgba(123,79,184,.45)}}
+.live-card .lc{display:flex;gap:16px;align-items:center}
+.live-card p{color:var(--ink2);font-size:14px;line-height:1.45}
+.live-card .lock{font-size:12.5px;color:var(--ink3);margin-top:6px}
+@media (prefers-reduced-motion:reduce){.live-card .orb,.jv.thinking .jv-state i{animation:none}}
 .disc{margin-top:22px;padding:12px 14px;border-radius:var(--r2);border:1px solid var(--line);font-size:12px;color:var(--ink3);line-height:1.5}
 @media (min-width:640px){
   .hgrid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -537,6 +571,7 @@ window.PERSO_CONFIG = {
     <div class="brand"><span class="mark perso"><svg><use href="#i-flame"/></svg></span><span class="brand-name">Phénix Perso</span></div>
     <div class="top-right">
       <button class="chip chip-btn no-print" id="btn-home" type="button" hidden>Mon espace</button>
+      <button class="chip chip-btn gold no-print" id="btn-live" type="button" hidden>En direct</button>
       <span class="chip" id="client-chip" hidden></span>
     </div>
   </header>
@@ -789,6 +824,28 @@ Forfait mobile 19,99"></textarea>
   </section>
 
   <p class="foot">Phénix Perso · Outil d'aide à la gestion de budget. Pas de conseil en investissement, en crédit, fiscal ou juridique. Les analyses sont produites par une IA à partir de tes données et peuvent contenir des erreurs : vérifie avant d'agir.</p>
+</div>
+
+<!-- Phénix en direct (Premium) -->
+<div class="jv" id="jarvis" hidden role="dialog" aria-modal="true" aria-label="Phénix en direct">
+  <canvas id="jv-canvas" aria-hidden="true"></canvas>
+  <div class="jv-top">
+    <span class="jv-brand">Phénix <em>en direct</em></span>
+    <span class="jv-state" id="jv-state"><i></i><span>prêt</span></span>
+    <button class="jv-close" id="jv-close" type="button" aria-label="Fermer">×</button>
+  </div>
+  <div class="jv-mid">
+    <p class="jv-said" id="jv-said"></p>
+    <p class="jv-reply" id="jv-reply"></p>
+    <div class="jv-change" id="jv-change" hidden><svg><use href="#i-check"/></svg><span id="jv-change-txt"></span><button type="button" class="link" id="jv-undo">Annuler</button></div>
+    <div class="jv-action" id="jv-action" hidden><span id="jv-action-txt"></span><button type="button" class="chip chip-btn" id="jv-action-add">Ajouter à ma semaine</button></div>
+  </div>
+  <div class="jv-bottom">
+    <button class="jv-mic" id="jv-mic" type="button" aria-label="Parler"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+    <p class="jv-hint" id="jv-hint">Appuie et parle</p>
+    <div class="jv-type" id="jv-type" hidden><input class="field" id="jv-input" placeholder="Écris ce qui se passe…" maxlength="1500" autocomplete="off"><button class="btn primary small" id="jv-send" type="button">Envoyer</button></div>
+    <button type="button" class="link jv-alt" id="jv-toggle-type">Écrire à la place</button>
+  </div>
 </div>
 
 <!-- Politique de confidentialité -->
@@ -1266,7 +1323,8 @@ var PERSO = (function () {
     code: "", label: "", expires: "", product: "", email: "", tmpPw: "", gateMode: "account", quota: { used: 0, limit: 5 }, consentAt: "",
     mode: "paste", text: "", files: [], form: { dettes: [], cats: {} }, ctx: {},
     etat: null, rawText: "", lectureRunId: "", sel: {}, run: null, view: null, history: [], checks: {}, checksAt: {},
-    goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home", situReturn: "home"
+    goals: [], cancelled: {}, coussin: 3, tipOffset: 0, cancel: false, prevScreen: "home", situReturn: "home",
+    premium: false, vocal: { turns: [] }, actionsPerso: []
   };
   var FIELDS = [
     ["revenus_mensuels", "Revenus nets / mois"], ["epargne_mensuelle", "Mis de côté / mois"], ["epargne_disponible", "Épargne disponible"],
@@ -1294,13 +1352,20 @@ var PERSO = (function () {
       var i = flow.indexOf(sp.dataset.step), c = flow.indexOf(cur);
       sp.className = i === c ? "on" : i < c ? "done" : "";
     });
-    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass" || (id === "situ" && !S.history.length && !S.ctx.situation_texte);
+    updateChips(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function currentScreen() { var on = document.querySelector(".screen.on"); return on ? on.id.replace("s-", "") : ""; }
+  function updateChips(id) {
+    id = id || currentScreen();
+    $("btn-home").hidden = !S.code || !S.consentAt || id === "home" || id === "gate" || id === "consent" || id === "pass" || (id === "situ" && !S.history.length && !S.ctx.situation_texte);
+    $("btn-live").hidden = !S.code || !S.consentAt || !S.premium || id === "gate" || id === "consent" || id === "pass";
   }
 
   // --- persistance (appareil uniquement) --------------------------------------
   function persistable() {
-    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, checksAt: S.checksAt, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin };
+    return { v: 1, code: S.code, label: S.label, expires: S.expires, product: S.product, email: S.email, consentAt: S.consentAt, mode: S.mode, text: S.text.slice(0, 150000), form: S.form, ctx: S.ctx, checks: S.checks, checksAt: S.checksAt, history: S.history.slice(0, 8), goals: S.goals, cancelled: S.cancelled, coussin: S.coussin, premium: S.premium, vocal: { turns: (S.vocal.turns || []).slice(-20) }, actionsPerso: S.actionsPerso };
   }
   var save = debounce(function () { saveNow(); }, 500);
   function saveNow() { try { localStorage.setItem(KEY, JSON.stringify(persistable())); } catch (e) { /* stockage plein : on continue */ } }
@@ -1340,7 +1405,7 @@ var PERSO = (function () {
       api({ action: "verify" }).then(function (j) {
         b.disabled = false;
         if (!j.ok) { S.code = ""; $("gate-err").textContent = j.error || "Code refusé."; return; }
-        S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota; S.email = "";
+        S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.quota = j.quota || S.quota; S.email = ""; S.premium = !!j.premium;
         afterGate();
       });
       return;
@@ -1351,9 +1416,9 @@ var PERSO = (function () {
     api({ action: "login", email: email, password: pw }).then(function (j) {
       b.disabled = false;
       if (!j.ok) { $("gate-err").textContent = j.error || "Connexion refusée."; return; }
-      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.email = j.email || email;
+      S.code = j.code; S.label = j.label || ""; S.expires = j.expires || ""; S.product = j.product || ""; S.email = j.email || email; S.premium = !!j.premium;
       $("g-pw").value = "";
-      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; renderMods(); } });
+      api({ action: "verify" }).then(function (v) { if (v.ok) { S.quota = v.quota || S.quota; S.premium = !!v.premium; renderMods(); } });
       if (j.mustChange) { S.tmpPw = pw; $("p-current-wrap").hidden = true; show("pass"); return; }
       afterGate();
     });
@@ -1404,7 +1469,7 @@ var PERSO = (function () {
   function buildPrecedent(run) {
     if (!run) return null;
     var libere = Object.keys(S.cancelled).map(function (k) { return k + " (" + eur(S.cancelled[k].montant) + "/mois)"; }).join(", ");
-    return { date: run.date, etat: run.etat, score: scoreOf(run), actions: planItems(run).map(function (x) { return { semaine: x.p.semaine, action: x.p.action, fait: !!S.checks[x.id], fait_le: S.checksAt[x.id] || "" }; }), libere: libere };
+    return { date: run.date, etat: run.etat, score: scoreOf(run), actions: planItems(run).concat(persoItems(cycle(run))).map(function (x) { return { semaine: x.p.semaine, action: x.p.action, fait: !!S.checks[x.id], fait_le: S.checksAt[x.id] || "" }; }), libere: libere };
   }
   function icsReminder() {
     var run = lastRun(), start = run ? cycle(run).dueDate : new Date(Date.now() + 30 * 864e5);
@@ -1443,13 +1508,14 @@ var PERSO = (function () {
     if (run) {
       html += cardPlan(run) + cardProgress(run) + cardTip();
     }
-    html += cardSitu();
+    html += cardLive() + cardSitu();
     if (run) html += cardScore() + cardMois(run) + cardCoussin(run);
     html += cardGoals(run);
     if (run) {
       html += cardSubs(run) + cardDettes(run) + cardBudget() + cardEvolution();
     } else html += cardTip();
     $("home-grid").innerHTML = html;
+    updateChips();
     setTimeout(animateBars, 60);
   }
   function cardScore() {
@@ -1532,8 +1598,11 @@ var PERSO = (function () {
     });
     return out;
   }
+  function persoItems(cy) {
+    return (S.actionsPerso || []).map(function (a) { return { p: { semaine: "S" + (cy ? cy.week : 1), action: a.action, impact: a.impact || "", difficulte: "facile" }, id: "perso:" + a.id, mod: "perso" }; });
+  }
   function cardPlan(run) {
-    var items = planItems(run), cy = cycle(run);
+    var cy = cycle(run), items = planItems(run).concat(persoItems(cy));
     if (!items.length) return "";
     var done = items.filter(function (x) { return S.checks[x.id]; }).length;
     var todo = items.filter(function (x) { return !S.checks[x.id]; }).sort(function (a, b) { return PERSO.weekOf(a.p.semaine) - PERSO.weekOf(b.p.semaine); });
@@ -1560,6 +1629,11 @@ var PERSO = (function () {
       ["Score Phénix", sLast ? sLast + " / 100" : "—", scores.length > 1 ? (sLast >= sFirst ? "+" : "") + (sLast - sFirst) + " depuis le premier bilan" : "lance un audit pour le suivre"]
     ];
     return card("Tes progrès", '<div class="kpis" style="grid-template-columns:repeat(2,minmax(0,1fr))">' + k.map(function (x) { return '<div class="kpi"><div class="kpi-l">' + esc(x[0]) + '</div><div class="kpi-v">' + esc(x[1]) + '</div><div class="kpi-d">' + esc(x[2]) + "</div></div>"; }).join("") + "</div>", { id: "card-progress", small: S.history.length + " bilan" + (S.history.length > 1 ? "s" : "") });
+  }
+  function cardLive() {
+    var inner = '<div class="lc"><div class="orb"></div><div><p>' + (S.premium ? "Raconte-lui ce qui se passe, à voix haute : un changement, un coup dur, une question. Il répond, met ta situation à jour et te propose une action." : "Parle à Phénix à voix haute : il t'écoute, répond, met ta situation à jour et te propose une action. Réservé à l'offre Premium.") + "</p>" + (S.premium ? "" : '<div class="lock">Demande l\'accès Premium à l\'équipe Phénix.</div>') + "</div></div>" +
+      (S.premium ? '<div class="btns" style="margin-top:12px"><button class="btn primary small" type="button" id="btn-live-open">Parler à Phénix</button></div>' : "");
+    return card("Phénix en direct", inner, { wide: true, id: "card-live", small: S.premium ? "assistant vocal" : "Premium" });
   }
   function cardSitu() {
     var t = S.ctx.situation_texte, h = S.ctx.historique_situation || [];
@@ -1955,8 +2029,17 @@ var PERSO = (function () {
     ["btn-priv-1", "btn-priv-2", "btn-priv-3"].forEach(function (id) { $(id).addEventListener("click", openPriv); });
     $("btn-modal-close").addEventListener("click", closePriv);
     $("modal-priv").addEventListener("click", function (e) { if (e.target === $("modal-priv")) closePriv(); });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closePriv(); });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") { closePriv(); if (JV.open) jvClose(); } });
     $("btn-home").addEventListener("click", goHome);
+    $("btn-live").addEventListener("click", jvOpen);
+    $("jv-close").addEventListener("click", jvClose);
+    $("jv-mic").addEventListener("click", function () { if (JV.state === "listening") jvStopListen(); else if (JV.state === "idle") { JV.textMode = false; $("jv-type").hidden = true; $("jv-toggle-type").textContent = "Écrire à la place"; jvListen(); } else if (JV.state === "speaking" && TTS) { TTS.cancel(); } });
+    $("jv-toggle-type").addEventListener("click", function () { jvTextMode(!JV.textMode); });
+    $("jv-send").addEventListener("click", function () { var t = $("jv-input").value.trim(); if (!t) return; $("jv-input").value = ""; JV.byVoice = false; jvSend(t); });
+    $("jv-input").addEventListener("keydown", function (e) { if (e.key === "Enter") $("jv-send").click(); });
+    $("jv-undo").addEventListener("click", jvUndo);
+    $("jv-action-add").addEventListener("click", jvAddAction);
+    if (TTS && TTS.addEventListener) TTS.addEventListener("voiceschanged", function () { JV.voice = null; });
     $("btn-data-home").addEventListener("click", goHome);
     $("btn-res-home").addEventListener("click", goHome);
     $("btn-home-bilan").addEventListener("click", function () { renderDataSitu(); show("data"); });
@@ -1974,6 +2057,7 @@ var PERSO = (function () {
     $("home-grid").addEventListener("click", function (e) {
       var add = e.target.closest("#g-add"); if (add) { addGoal(); return; }
       if (e.target.id === "btn-situ-edit") { openSitu("home"); return; }
+      if (e.target.id === "btn-live-open") { jvOpen(); return; }
       var rm = e.target.closest(".goal .rm"); if (rm) { var id = rm.closest(".goal").dataset.id; S.goals = S.goals.filter(function (g) { return g.id !== id; }); saveNow(); renderHome(); return; }
       if (e.target.id === "tip-next") { S.tipOffset = (S.tipOffset || 0) + 1; $("tip-txt").textContent = PERSO.tipOfWeek(S.tipOffset); return; }
       if (e.target.id === "btn-ics") { icsReminder(); return; }
@@ -2027,6 +2111,162 @@ var PERSO = (function () {
     window.addEventListener("beforeprint", function () { document.querySelectorAll(".tabpane").forEach(function (p) { p.style.display = ""; }); });
     window.addEventListener("afterprint", function () { var on = document.querySelector("#tabs button.on"); if (on && !$("tabs").hidden) selectTab(on.dataset.k); });
   }
+  // --- Phénix en direct (assistant vocal, Premium) ----------------------------
+  var JV = { open: false, state: "idle", level: 0, target: 0, rec: null, audio: null, analyser: null, stream: null, raf: 0, t: 0, byVoice: false, pending: null, lastSitu: null, voice: null, textMode: false };
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  var TTS = window.speechSynthesis || null;
+  function jvSetState(st, hint) {
+    JV.state = st; var el = $("jarvis"); el.className = "jv " + st;
+    $("jv-state").lastElementChild.textContent = { idle: "prêt", listening: "je t'écoute", thinking: "je réfléchis", speaking: "je te réponds" }[st] || st;
+    if (hint !== undefined) $("jv-hint").textContent = hint;
+  }
+  function jvOpen() {
+    if (!S.premium) { toast("Phénix en direct fait partie de l'offre Premium.", true); return; }
+    JV.open = true; $("jarvis").hidden = false; jvSetState("idle", SR ? "Appuie et parle" : "Ton navigateur n'a pas de reconnaissance vocale : écris ci-dessous");
+    $("jv-mic").disabled = !SR; if (!SR) jvTextMode(true);
+    $("jv-said").textContent = ""; $("jv-change").hidden = true; $("jv-action").hidden = true;
+    var last = (S.vocal.turns || []).slice(-1)[0];
+    var greet = last ? "Content de te retrouver" + (S.ctx.prenom ? ", " + cap(S.ctx.prenom) : "") + ". On reprend ? Dis-moi ce qui se passe." : "Salut" + (S.ctx.prenom ? " " + cap(S.ctx.prenom) : "") + ". Dis-moi ce qui se passe, je t'écoute.";
+    $("jv-reply").textContent = greet;
+    jvStart(); jvSpeak(greet, function () { if (SR && !JV.textMode) jvListen(); });
+  }
+  function jvClose() {
+    JV.open = false; jvStopListen(); if (TTS) TTS.cancel(); jvStop();
+    $("jarvis").hidden = true; renderHome();
+  }
+  function jvTextMode(on) {
+    JV.textMode = on; $("jv-type").hidden = !on; $("jv-toggle-type").textContent = on ? "Parler à la place" : "Écrire à la place";
+    if (on) { jvStopListen(); $("jv-input").focus(); }
+  }
+  // Micro : analyse du niveau sonore pour l'orbe (indépendant de la reconnaissance)
+  function jvMicLevel() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || JV.stream) return;
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+      JV.stream = stream;
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      JV.audio = new AC(); var src = JV.audio.createMediaStreamSource(stream); JV.analyser = JV.audio.createAnalyser(); JV.analyser.fftSize = 512; src.connect(JV.analyser);
+    }).catch(function () { /* micro refusé : la reconnaissance peut quand même fonctionner */ });
+  }
+  function jvReadLevel() {
+    if (!JV.analyser) return 0;
+    var buf = new Uint8Array(JV.analyser.fftSize); JV.analyser.getByteTimeDomainData(buf);
+    var sum = 0; for (var i = 0; i < buf.length; i++) { var v = (buf[i] - 128) / 128; sum += v * v; }
+    return Math.min(1, Math.sqrt(sum / buf.length) * 4);
+  }
+  function jvListen() {
+    if (!SR || !JV.open) return;
+    jvMicLevel();
+    try { JV.rec = new SR(); } catch (e) { return; }
+    JV.rec.lang = "fr-FR"; JV.rec.interimResults = true; JV.rec.continuous = false; JV.rec.maxAlternatives = 1;
+    var finalText = "";
+    JV.rec.onresult = function (ev) {
+      var interim = "";
+      for (var i = ev.resultIndex; i < ev.results.length; i++) { var r = ev.results[i]; if (r.isFinal) finalText += r[0].transcript; else interim += r[0].transcript; }
+      $("jv-said").textContent = (finalText + " " + interim).trim();
+    };
+    JV.rec.onerror = function (ev) { if (ev.error === "not-allowed") { jvSetState("idle", "Micro refusé : autorise-le dans le navigateur, ou écris ci-dessous"); jvTextMode(true); } else if (ev.error !== "aborted" && ev.error !== "no-speech") jvSetState("idle", "Je n'ai pas entendu. Appuie et réessaie."); else if (ev.error === "no-speech") jvSetState("idle", "Je n'ai rien entendu. Appuie et parle."); };
+    JV.rec.onend = function () { JV.rec = null; if (JV.state !== "listening") return; var t = finalText.trim() || $("jv-said").textContent.trim(); if (t) { JV.byVoice = true; jvSend(t); } else jvSetState("idle", "Appuie et parle"); };
+    try { JV.rec.start(); jvSetState("listening", "Je t'écoute… appuie pour arrêter"); } catch (e) { jvSetState("idle", "Appuie et parle"); }
+  }
+  function jvStopListen() { if (JV.rec) { try { JV.rec.stop(); } catch (e) {} } }
+  function jvSpeak(text, done) {
+    if (!TTS || !text) { if (JV.open) jvSetState("idle", SR && !JV.textMode ? "Appuie et parle" : ""); if (done) done(); return; }
+    TTS.cancel();
+    var u = new SpeechSynthesisUtterance(text); u.lang = "fr-FR"; u.rate = 1; u.pitch = 0.9;
+    if (!JV.voice) { var vs = TTS.getVoices ? TTS.getVoices() : []; JV.voice = vs.filter(function (v) { return /^fr/i.test(v.lang) && /Thomas|Amélie|Audrey|Google|Aurélie|Marie/i.test(v.name); })[0] || vs.filter(function (v) { return /^fr/i.test(v.lang); })[0] || null; }
+    if (JV.voice) u.voice = JV.voice;
+    u.onstart = function () { jvSetState("speaking", ""); JV.target = 0.6; };
+    u.onboundary = function () { JV.level = Math.min(1, JV.level + 0.35 + Math.random() * 0.3); };
+    u.onend = u.onerror = function () { JV.target = 0; if (JV.open) { jvSetState("idle", SR && !JV.textMode ? "Appuie et parle" : ""); if (done) done(); } };
+    TTS.speak(u);
+  }
+  function jvSend(text) {
+    text = String(text || "").trim(); if (!text || JV.state === "thinking") return;
+    $("jv-said").textContent = text; $("jv-change").hidden = true; $("jv-action").hidden = true;
+    jvSetState("thinking", "");
+    S.vocal.turns.push({ role: "user", texte: text, t: new Date().toISOString() });
+    var run = lastRun(), plan = run ? planItems(run).concat(persoItems(cycle(run))).map(function (x) { return { action: x.p.action, fait: !!S.checks[x.id] }; }) : [];
+    api({ action: "vocal", turnId: uid(), message: text, tours: S.vocal.turns.slice(-9, -1), context: S.ctx, etat: run ? run.etat : null, plan: plan }).then(function (j) {
+      if (!JV.open) return;
+      if (!j.ok) { jvSetState("idle", "Appuie et parle"); $("jv-reply").textContent = j.error || "Je n'ai pas réussi à répondre. On réessaie ?"; jvSpeak($("jv-reply").textContent); return; }
+      var r = j.result || {};
+      S.vocal.turns.push({ role: "assistant", texte: r.reponse || "", t: new Date().toISOString() });
+      S.vocal.turns = S.vocal.turns.slice(-20);
+      $("jv-reply").textContent = r.reponse || "";
+      if (r.situation_maj && r.situation_maj.trim() && r.situation_maj.trim() !== (S.ctx.situation_texte || "")) {
+        JV.lastSitu = { texte: S.ctx.situation_texte || "", date: S.ctx.situation_date || "", hist: (S.ctx.historique_situation || []).slice(), objectif: S.ctx.objectif || "" };
+        if (S.ctx.situation_texte) S.ctx.historique_situation = [{ date: S.ctx.situation_date || new Date().toISOString(), texte: S.ctx.situation_texte }].concat(S.ctx.historique_situation || []).slice(0, 5);
+        S.ctx.situation_texte = r.situation_maj.trim().slice(0, 700); S.ctx.situation_date = new Date().toISOString();
+        if (r.objectif) S.ctx.objectif = r.objectif;
+        $("jv-change-txt").textContent = "Situation mise à jour : " + (r.changement || "j'ai noté ce que tu m'as dit."); $("jv-change").hidden = false;
+      } else if (r.objectif && r.objectif !== S.ctx.objectif) { S.ctx.objectif = r.objectif; }
+      if (r.action_proposee && r.action_proposee.action) { JV.pending = r.action_proposee; $("jv-action-txt").textContent = r.action_proposee.action + (r.action_proposee.impact ? " · " + r.action_proposee.impact : ""); $("jv-action").hidden = false; }
+      saveNow();
+      jvSpeak(r.reponse || "", function () { if (JV.byVoice && SR && !JV.textMode) jvListen(); });
+    });
+  }
+  function jvUndo() {
+    if (!JV.lastSitu) return;
+    S.ctx.situation_texte = JV.lastSitu.texte; S.ctx.situation_date = JV.lastSitu.date; S.ctx.historique_situation = JV.lastSitu.hist; S.ctx.objectif = JV.lastSitu.objectif; JV.lastSitu = null;
+    $("jv-change").hidden = true; saveNow(); toast("Situation rétablie.");
+  }
+  function jvAddAction() {
+    if (!JV.pending) return;
+    S.actionsPerso.push({ id: uid(), action: JV.pending.action, impact: JV.pending.impact || "", date: new Date().toISOString() });
+    JV.pending = null; $("jv-action").hidden = true; saveNow(); toast("Ajouté à tes actions de la semaine.");
+  }
+  // Orbe : anneaux de barres qui réagissent au niveau (micro réel à l'écoute, modulation synthétique à la parole)
+  function jvStart() {
+    var c = $("jv-canvas"), ctx = c.getContext ? c.getContext("2d") : null; if (!ctx) return;
+    var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    function frame() {
+      if (!JV.open) return;
+      var dpr = window.devicePixelRatio || 1, w = c.clientWidth, h = c.clientHeight;
+      if (c.width !== w * dpr || c.height !== h * dpr) { c.width = w * dpr; c.height = h * dpr; }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+      JV.t += reduce ? 0.004 : 0.016;
+      var lv = JV.state === "listening" ? jvReadLevel() : JV.state === "thinking" ? 0.25 + 0.15 * Math.sin(JV.t * 2.2) : JV.state === "speaking" ? JV.target * (0.5 + 0.5 * Math.abs(Math.sin(JV.t * 7))) : 0.06 + 0.04 * Math.sin(JV.t);
+      JV.level += ((Math.max(lv, JV.level * 0.86)) - JV.level) * 0.35;
+      var cx = w / 2, cy = Math.min(h * 0.42, h - 300), R = Math.min(w, h) * 0.17;
+      var col = JV.state === "thinking" ? [201, 179, 240] : JV.state === "speaking" ? [232, 114, 44] : [243, 207, 122];
+      // halo
+      var g = ctx.createRadialGradient(cx, cy, R * 0.2, cx, cy, R * (2.2 + JV.level)); g.addColorStop(0, "rgba(" + col.join(",") + "," + (0.28 + JV.level * 0.25) + ")"); g.addColorStop(1, "rgba(" + col.join(",") + ",0)");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+      // anneaux de barres
+      var N = 96;
+      for (var ring = 0; ring < 2; ring++) {
+        var base = R * (1 + ring * 0.42), dir = ring ? -1 : 1;
+        for (var i = 0; i < N; i++) {
+          var a = (i / N) * Math.PI * 2 + JV.t * 0.15 * dir;
+          var noise = 0.5 + 0.5 * Math.sin(i * 0.9 + JV.t * (3 + ring)) * Math.sin(i * 0.37 - JV.t * 2.1);
+          var len = 4 + (R * 0.55) * JV.level * noise + (ring ? 2 : 6) * (0.5 + 0.5 * Math.sin(JV.t * 1.3 + i));
+          var x1 = cx + Math.cos(a) * base, y1 = cy + Math.sin(a) * base, x2 = cx + Math.cos(a) * (base + len), y2 = cy + Math.sin(a) * (base + len);
+          ctx.strokeStyle = "rgba(" + col.join(",") + "," + (ring ? 0.35 : 0.85) + ")"; ctx.lineWidth = ring ? 1.2 : 2; ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+      }
+      // arcs tournants
+      for (var k = 0; k < 3; k++) {
+        ctx.strokeStyle = "rgba(245,239,230," + (0.12 + k * 0.06) + ")"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(cx, cy, R * (1.9 + k * 0.28), JV.t * (0.4 + k * 0.2) * (k % 2 ? -1 : 1), JV.t * (0.4 + k * 0.2) * (k % 2 ? -1 : 1) + Math.PI * (0.6 + k * 0.3)); ctx.stroke();
+      }
+      // cœur
+      var core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 0.8); core.addColorStop(0, "rgba(255,248,230," + (0.9) + ")"); core.addColorStop(0.35, "rgba(" + col.join(",") + ",0.75)"); core.addColorStop(1, "rgba(" + col.join(",") + ",0)");
+      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, R * (0.8 + JV.level * 0.25), 0, Math.PI * 2); ctx.fill();
+      // ligne d'onde
+      ctx.strokeStyle = "rgba(" + col.join(",") + ",0.5)"; ctx.lineWidth = 1.5; ctx.beginPath();
+      for (var x = 0; x <= w; x += 4) { var y = h - 150 + Math.sin(x * 0.02 + JV.t * 4) * (4 + 26 * JV.level) * Math.sin(x / w * Math.PI); if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y); }
+      ctx.stroke();
+      JV.raf = requestAnimationFrame(frame);
+    }
+    cancelAnimationFrame(JV.raf); JV.raf = requestAnimationFrame(frame);
+  }
+  function jvStop() {
+    cancelAnimationFrame(JV.raf);
+    if (JV.stream) { JV.stream.getTracks().forEach(function (t) { t.stop(); }); JV.stream = null; }
+    if (JV.audio) { try { JV.audio.close(); } catch (e) {} JV.audio = null; JV.analyser = null; }
+  }
+
   function toggleMod(k) {
     if (k === "all") { var all = PERSO.MENU.every(function (x) { return S.sel[x]; }); PERSO.MENU.forEach(function (x) { S.sel[x] = !all; }); if (!all && suiviDispo()) S.sel.suivi = true; }
     else S.sel[k] = !S.sel[k];
@@ -2041,14 +2281,14 @@ var PERSO = (function () {
     if (d && typeof d === "object") {
       S.code = d.code || ""; S.label = d.label || ""; S.expires = d.expires || ""; S.product = d.product || ""; S.email = d.email || ""; S.consentAt = d.consentAt || ""; S.mode = d.mode || "paste";
       S.text = d.text || ""; S.form = d.form || { dettes: [], cats: {} }; S.ctx = d.ctx || {}; S.checks = d.checks || {}; S.history = Array.isArray(d.history) ? d.history : [];
-      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {};
+      S.goals = Array.isArray(d.goals) ? d.goals : []; S.cancelled = d.cancelled || {}; S.coussin = toNum(d.coussin) || 3; S.checksAt = d.checksAt || {}; S.premium = !!d.premium; S.vocal = d.vocal && Array.isArray(d.vocal.turns) ? d.vocal : { turns: [] }; S.actionsPerso = Array.isArray(d.actionsPerso) ? d.actionsPerso : [];
       $("txt").value = S.text; fillForm(); renderDataSitu();
     }
     setMode(S.mode); setClient(); setGateMode("account");
     if (S.code) {
       if (S.consentAt) goHome(); else show("consent");
       api({ action: "verify" }).then(function (j) {
-        if (j.ok) { S.label = j.label || S.label; S.expires = j.expires || ""; S.product = j.product || S.product; S.quota = j.quota || S.quota; setClient(); renderMods(); save(); }
+        if (j.ok) { S.label = j.label || S.label; S.expires = j.expires || ""; S.product = j.product || S.product; S.quota = j.quota || S.quota; S.premium = !!j.premium; setClient(); renderMods(); save(); if ($("s-home").classList.contains("on")) renderHome(); }
         else if (j.error && !/Connexion/.test(j.error)) { S.code = ""; setClient(); saveNow(); $("gate-err").textContent = j.error; show("gate"); }
       });
     } else show("gate");

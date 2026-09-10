@@ -256,7 +256,11 @@ function rateLimited(ip) {
 // ---------------------------------------------------------------------------
 //  Appel Claude (sortie JSON structurée, prompt caching sur le préfixe)
 // ---------------------------------------------------------------------------
-async function callClaude(content, schema, maxTokens, system, effort) {
+function callClaude(content, schema, maxTokens, system, effort) {
+  return callClaudeMessages([{ role: "user", content: content }], schema, maxTokens, system, effort);
+}
+// Même appel, avec un fil de messages (conversation) au lieu d'un seul tour.
+async function callClaudeMessages(messages, schema, maxTokens, system, effort) {
   if (!API_KEY) throw new Error("ANTHROPIC_API_KEY manquante côté serveur.");
   const ctrl = new AbortController();
   const timer = setTimeout(function () { ctrl.abort(); }, 285000);
@@ -269,7 +273,7 @@ async function callClaude(content, schema, maxTokens, system, effort) {
         model: MODEL,
         max_tokens: maxTokens,
         system: [{ type: "text", text: system || SYSTEM, cache_control: { type: "ephemeral" } }],
-        messages: [{ role: "user", content: content }],
+        messages: messages,
         output_config: { effort: effort || EFFORT, format: { type: "json_schema", schema: schema } }
       }),
       signal: ctrl.signal
@@ -419,4 +423,4 @@ module.exports = async function handler(req, res) {
   }
 };
 
-module.exports._internal = { callClaude: callClaude, lectureRobuste: lectureRobuste, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, quotaLimit: quotaLimit, MODEL: MODEL, EFFORT: EFFORT, QUOTA: QUOTA, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
+module.exports._internal = { callClaude: callClaude, callClaudeMessages: callClaudeMessages, lectureRobuste: lectureRobuste, rateLimited: rateLimited, checkCode: checkCode, mintCode: mintCode, normTag: normTag, sign: sign, quotaLimit: quotaLimit, MODEL: MODEL, EFFORT: EFFORT, QUOTA: QUOTA, ETAT_SCHEMA: ETAT_SCHEMA, RAPPORT_SCHEMA: RAPPORT_SCHEMA, schemaRapport: schemaRapport, rapportComplet: rapportComplet, MODULE_PROMPTS: MODULE_PROMPTS, fileBlocks: fileBlocks, ctxText: ctxText };
